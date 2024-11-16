@@ -1,7 +1,6 @@
+// vite.config.js
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  server: {
-    open: true, // Automatically opens the browser
-  },
+  // Your configurations
 });
