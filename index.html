@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>TryIt - 3D Hotel Explorer</title>
+  <title>TryIt - 3D Travel Explorer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     #map {
@@ -12,13 +12,54 @@
     .hidden {
       display: none;
     }
+    #trip-form {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start; /* Aligns all items to the left */
+      margin-top: 20px;
+    }
+
+    #trip-form input {
+      margin: 5px 0; /* Consistent vertical spacing */
+      width: 200px; /* Consistent input box width */
+    }
+
+    #trip-form button[type="submit"] {
+      margin: 5px 0; /* Same spacing as inputs */
+      width: 200px; /* Match the width of input boxes */
+      text-align: center;
+      transform: scale(2); /* Makes the button 50% bigger */
+      transform-origin: center; /* Ensures scaling starts from the left */
+    }
+
+    #trip-form input#budget,
+    #trip-form button[type="submit"] {
+      display: inline-block; /* Ensures they are inline */
+    }
+
+    #trip-form {
+      display: flex;
+      flex-wrap: wrap; /* Allow items to wrap */
+      gap: 10px; /* Space between elements */
+      align-items: center; /* Align items vertically */
+    }
+
+    h1 {
+        font-family: Arial, sans-serif;
+        text-align: center; /* Center the title */
+        margin-top: 20px;   /* Add spacing from the top */
+      color: #333;        /* Change text color */
+    }
+
   </style>
 </head>
 <body>
   <!-- Trip Intake Form -->
+  <div style="height: 50px;"></div>
+  <h1 style="text-align: center; margin-top: 10px;">3D Travel Explorer</h1>  
   <div id="trip-intake">
     <form id="trip-form">
-      <input type="text" id="destinations" placeholder="Destinations (e.g., New York, Tokyo)" required>
+      <input type="text" id="destinations" placeholder="City (e.g., New York, Tokyo)" required>
       <input type="date" id="start-date" required>
       <input type="date" id="end-date" required>
       <input type="number" id="budget" placeholder="Budget (e.g., 1000)" required>
