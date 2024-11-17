@@ -26,9 +26,13 @@ function loadGoogleMapsScript() {
     return;
   }
   const script = document.createElement('script');
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places,geometry&callback=initMap`;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&v=alpha&libraries=maps3d`;
   script.async = true;
   script.defer = true;
+  script.onload = () => {
+    console.log("Google Maps API script loaded");
+    initApp();
+  };
   document.head.appendChild(script);
 }
 
@@ -46,6 +50,20 @@ function initApp() {
     return;
   }
 
+  // Make inputs 10x bigger
+  const startDateInput = document.getElementById('start-date');
+  const endDateInput = document.getElementById('end-date');
+  const destinationsInput = document.getElementById('destinations');
+  const budgetInput = document.getElementById('budget');
+
+  [startDateInput, endDateInput, destinationsInput, budgetInput].forEach(input => {
+    input.style.fontSize = '30px';
+    input.style.padding = '20px';
+    input.style.margin = '20px';
+    input.style.width = '80%';
+    input.style.maxWidth = '800px';
+  });
+
   // Trip Intake Form Submission
   tripForm.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -59,31 +77,47 @@ function initApp() {
 
 // Collect user input
 function collectUserData() {
-  userData.startDate = document.getElementById('start-date').value;
-  userData.endDate = document.getElementById('end-date').value;
-  userData.destinations = document.getElementById('destinations').value.split(',').map(s => s.trim());
-  userData.budget = parseFloat(document.getElementById('budget').value);
+  // Get form elements
+  const startDateInput = document.getElementById('start-date');
+  const endDateInput = document.getElementById('end-date');
+  const destinationsInput = document.getElementById('destinations');
+  const budgetInput = document.getElementById('budget');
+
+  // Collect the data
+  userData.startDate = startDateInput.value;
+  userData.endDate = endDateInput.value;
+  userData.destinations = destinationsInput.value.split(',').map(s => s.trim());
+  userData.budget = parseFloat(budgetInput.value);
   console.log("User Data:", userData);
 }
 
 // Initialize Map and Find Hotels
 function initMapAndFindHotels() {
-  const center = { lat: 40.7128, lng: -74.0060 }; // Default to NYC or use user's destination
-  map = new google.maps.Map(document.getElementById('map'), {
-    center: center,
-    zoom: 16,
-    heading: 0,
-    tilt: 45,
-    mapId: 'YOUR_MAP_ID' // Replace with your Map ID if you have one
+  const firstDestination = userData.destinations[0];
+  const geocoder = new google.maps.Geocoder();
+
+  geocoder.geocode({ address: firstDestination }, (results, status) => {
+    if (status === 'OK') {
+      const center = {
+        lat: results[0].geometry.location.lat(),
+        lng: results[0].geometry.location.lng()
+      };
+      
+      const mapElement = document.createElement('gmp-map-3d');
+      mapElement.setAttribute('center', `${center.lat},${center.lng}`);
+      mapElement.setAttribute('tilt', '67.5');
+      mapElement.style.height = '100%';
+      mapElement.style.width = '100%';
+      document.getElementById('map').appendChild(mapElement);
+
+      console.log("3D Map initialized:", mapElement);
+
+      // Use Places API to find hotels
+      findHotels(center);
+    } else {
+      console.error('Geocode was not successful for the following reason: ' + status);
+    }
   });
-
-  console.log("Map initialized:", map);
-
-  // Add WASD controls
-  addKeyboardControls();
-
-  // Use Places API to find hotels
-  findHotels(center);
 }
 
 // Other utility functions remain unchanged...
