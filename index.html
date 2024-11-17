@@ -3,27 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <title>TryIt - 3D Hotel Explorer</title>
-  <!-- Vite injects scripts automatically, so we don't need to include main.js here -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    #map {
+      width: 100%;
+      height: 100vh; /* Full screen for the map container */
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
 <body>
   <!-- Trip Intake Form -->
   <div id="trip-intake">
-    <!-- Form elements as before -->
+    <form id="trip-form">
+      <input type="text" id="destinations" placeholder="Destinations (e.g., New York, Tokyo)" required>
+      <input type="date" id="start-date" required>
+      <input type="date" id="end-date" required>
+      <input type="number" id="budget" placeholder="Budget (e.g., 1000)" required>
+      <button type="submit">Submit</button>
+    </form>
   </div>
 
   <!-- Map Container -->
-  <div id="map-container" style="display: none;">
+  <div id="map-container" class="hidden">
     <div id="map"></div>
-    <!-- Additional overlays and popups -->
   </div>
 
   <!-- Summary Page -->
-  <div id="summary-page" style="display: none;">
-    <!-- Summary table as before -->
+  <div id="summary-page" class="hidden">
+    <h2>Trip Summary</h2>
+    <div id="summary-table"></div>
   </div>
 
   <!-- Import main.js -->
-  <script type="module" src="/main.js"></script>
+  <script type="module" src="/main.js" defer></script>
 </body>
 </html>
