@@ -45,24 +45,26 @@
     }
 
     h1 {
-        font-family: Arial, sans-serif;
-        text-align: center; /* Center the title */
-        margin-top: 20px;   /* Add spacing from the top */
+      font-family: Arial, sans-serif;
+      text-align: center; /* Center the title */
+      margin-top: 20px;   /* Add spacing from the top */
       color: #333;        /* Change text color */
     }
-
   </style>
 </head>
 <body>
   <!-- Trip Intake Form -->
-  <div style="height: 50px;"></div>
+  <div style="height: 20px;"></div>
   <h1 style="text-align: center; margin-top: 10px;">3D Travel Explorer</h1>  
   <div id="trip-intake">
     <form id="trip-form">
-      <input type="text" id="destinations" placeholder="City (e.g., New York, Tokyo)" required>
-      <input type="date" id="start-date" required>
-      <input type="date" id="end-date" required>
-      <input type="number" id="budget" placeholder="Budget (e.g., 1000)" required>
+      <input type="text" id="city" placeholder="City" required>
+      <input type="text" id="poi1" placeholder="Point of Interest 1" required>
+      <input type="text" id="poi2" placeholder="Point of Interest 2" required>
+      <input type="text" id="poi3" placeholder="Point of Interest 3" required>
+      <input type="date" id="start-date">
+      <input type="date" id="end-date">
+      <input type="number" id="budget" placeholder="Budget (e.g., 1000)">
       <button type="submit">Submit</button>
     </form>
   </div>

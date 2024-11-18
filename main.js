@@ -1,17 +1,21 @@
 // main.js
-
+// Import the Google Generative AI client
+import { GoogleGenerativeAI } from "@google/generative-ai";
 // Global Variables
-let map;
 let hotels = [];
 let currentHotelIndex = 0;
 let userData = {};
+let debugWindow;
 
-// Access the environment variable
+// Access the environment variables
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const googleGeminiApiKey = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY;
+
 
 // Initialize the application after the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function () {
   console.log("DOM fully loaded");
+  updateDebugWindow();
   loadGoogleMapsScript();
 });
 
@@ -26,7 +30,7 @@ function loadGoogleMapsScript() {
     return;
   }
   const script = document.createElement('script');
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&v=alpha&libraries=maps3d`;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
   script.async = true;
   script.defer = true;
   script.onload = () => {
@@ -36,12 +40,6 @@ function loadGoogleMapsScript() {
   document.head.appendChild(script);
 }
 
-// Google Maps callback function
-window.initMap = function () {
-  console.log("Google Maps API initialized");
-  initApp();
-};
-
 function initApp() {
   console.log("Initializing app...");
   const tripForm = document.getElementById('trip-form');
@@ -50,13 +48,11 @@ function initApp() {
     return;
   }
 
-  // Make inputs 10x bigger
-  const startDateInput = document.getElementById('start-date');
-  const endDateInput = document.getElementById('end-date');
-  const destinationsInput = document.getElementById('destinations');
-  const budgetInput = document.getElementById('budget');
-
-  [startDateInput, endDateInput, destinationsInput, budgetInput].forEach(input => {
+  // Customize input styles for better UX
+  const inputs = ['city', 'start-date', 'end-date', 'poi1', 'poi2', 'poi3', 'budget'].map(id =>
+    document.getElementById(id)
+  );
+  inputs.forEach(input => {
     input.style.fontSize = '30px';
     input.style.padding = '20px';
     input.style.margin = '20px';
@@ -64,7 +60,7 @@ function initApp() {
     input.style.maxWidth = '800px';
   });
 
-  // Trip Intake Form Submission
+  // Form submission handler
   tripForm.addEventListener('submit', function (e) {
     e.preventDefault();
     console.log("Trip form submitted");
@@ -73,56 +69,179 @@ function initApp() {
     showElement('map-container');
     initMapAndFindHotels();
   });
+
+// Update the debug window
+updateDebugWindow();
 }
 
-// Collect user input
 function collectUserData() {
-  // Get form elements
+  const city = document.getElementById('city');
+  const poi1Input = document.getElementById('poi1');
+  const poi2Input = document.getElementById('poi2');
+  const poi3Input = document.getElementById('poi3');
   const startDateInput = document.getElementById('start-date');
   const endDateInput = document.getElementById('end-date');
-  const destinationsInput = document.getElementById('destinations');
   const budgetInput = document.getElementById('budget');
 
-  // Collect the data
+  userData.pointsOfInterest = [
+    poi1Input.value.trim(),
+    poi2Input.value.trim(),
+    poi3Input.value.trim()
+  ];
   userData.startDate = startDateInput.value;
   userData.endDate = endDateInput.value;
-  userData.destinations = destinationsInput.value.split(',').map(s => s.trim());
   userData.budget = parseFloat(budgetInput.value);
   console.log("User Data:", userData);
 }
 
-// Initialize Map and Find Hotels
 function initMapAndFindHotels() {
-  const firstDestination = userData.destinations[0];
-  const geocoder = new google.maps.Geocoder();
-
-  geocoder.geocode({ address: firstDestination }, (results, status) => {
-    if (status === 'OK') {
-      const center = {
-        lat: results[0].geometry.location.lat(),
-        lng: results[0].geometry.location.lng()
-      };
-      
-      const mapElement = document.createElement('gmp-map-3d');
-      mapElement.setAttribute('center', `${center.lat},${center.lng}`);
-      mapElement.setAttribute('tilt', '67.5');
-      mapElement.style.height = '100%';
-      mapElement.style.width = '100%';
-      document.getElementById('map').appendChild(mapElement);
-
-      console.log("3D Map initialized:", mapElement);
-
-      // Use Places API to find hotels
-      findHotels(center);
-    } else {
-      console.error('Geocode was not successful for the following reason: ' + status);
-    }
-  });
+  geocodePointsOfInterest();
 }
 
-// Other utility functions remain unchanged...
+////GEMINI////
+// Initialize the client with your API key
+const genAI = new GoogleGenerativeAI(googleGeminiApiKey);
 
-// Helper Functions
+// Get the specific model you want to use
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+// Define an async function to run the prompt
+async function runPrompt() {
+  try {
+    const prompt = `what is the address for Hotel Kabuki in ${userData.city}?`;
+    // Generate text using the model and your prompt
+    //const response = await model.generateText({ prompt: prompt });
+    const response = await model.generateContent(prompt);
+    //TODO: figure out how to get the text from the response
+
+    // **Store the generated text in a variable**
+    const hotelAddress = response.text; 
+
+    // **Now you can use hotelAddress in the rest of your code**
+    console.log("The address for Hotel Kabuki is:", hotelAddress); 
+
+  } catch (error) {
+    console.error("Error generating text:", error);
+  }
+}
+
+// Execute the function
+runPrompt();
+
+/*
+function geocodePointsOfInterest() {
+  const promises = userData.pointsOfInterest.map(poi => {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(poi)}&key=${geminiApiKey}`;
+    return fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'OK' && data.results.length > 0) {
+          const result = data.results[0];
+          const location = result.geometry.location;
+          let zipCode = null;
+          for (const component of result.address_components) {
+            if (component.types.includes('postal_code')) {
+              zipCode = component.long_name;
+              break;
+            }
+          }
+          return {
+            poi: poi,
+            location: location,
+            zipCode: zipCode
+          };
+        } else {
+          console.error('Geocoding API error for ', poi, ':', data.status);
+          return null;
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching data from Geocoding API:', error);
+        return null;
+      });
+  });
+
+  Promise.all(promises)
+    .then(results => {
+      userData.geocodedPoints = results.filter(r => r !== null);
+      if (userData.geocodedPoints.length === 0) {
+        console.error('No valid Points of Interest were geocoded.');
+        return;
+      }
+      // Proceed to find hotels
+      findHotels();
+    });
+}
+*/
+
+//TODO: Use hotelAddress in findHotels()
+
+function findHotels() {
+  const promises = userData.geocodedPoints.map(geocodedPoint => {
+    const { location, zipCode } = geocodedPoint;
+    const query = 'hotel';
+    const type = 'lodging';
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
+      query
+    )}&location=${location.lat},${location.lng}&radius=5000&type=${type}&key=${googleMapsApiKey}`;
+
+    return fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'OK' && data.results.length > 0) {
+          // For simplicity, take the first hotel
+          return data.results[0];
+        } else {
+          console.error('Text Search request was not successful:', data.status);
+          return null;
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching data from Places API:', error);
+        return null;
+      });
+  });
+
+  Promise.all(promises)
+    .then(results => {
+      hotels = results.filter(hotel => hotel !== null);
+      if (hotels.length === 0) {
+        console.error('No hotels found for the given Points of Interest.');
+        return;
+      }
+      console.log("Hotels found:", hotels);
+      // Initialize map with first hotel
+      initMapWithHotel(hotels[0]);
+      // Update the debug window
+      updateDebugWindow();
+    });
+}
+
+function initMapWithHotel(hotel) {
+  const center = {
+    lat: hotel.geometry.location.lat,
+    lng: hotel.geometry.location.lng,
+  };
+
+  const mapOptions = {
+    center: center,
+    zoom: 18, // High zoom level
+    mapTypeId: 'satellite',
+    tilt: 45
+  };
+
+  const map = new google.maps.Map(document.getElementById('map'), mapOptions);
+
+  // Add a marker for the hotel
+  new google.maps.Marker({
+    position: center,
+    map: map,
+    title: hotel.name,
+  });
+
+  console.log("Map initialized with hotel:", hotel.name);
+}
+
 function hideElement(id) {
   document.getElementById(id).style.display = 'none';
 }
@@ -130,3 +249,84 @@ function hideElement(id) {
 function showElement(id) {
   document.getElementById(id).style.display = 'block';
 }
+
+function updateDebugWindow() {
+  if (!debugWindow) {
+    debugWindow = document.createElement('div');
+    
+    // Add test fill button
+    const testFillButton = document.createElement('button');
+    testFillButton.textContent = 'Fill Test Data (SF)';
+    testFillButton.style.cssText = `
+      background: #4CAF50;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      font-family: sans-serif;
+    `;
+    testFillButton.onclick = fillTestData;
+    
+    debugWindow.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #00ff00;
+      padding: 15px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 14px;
+      max-width: 300px;
+      z-index: 1000;
+    `;
+    
+    // Create a container for the debug info that we'll update later
+    const debugInfo = document.createElement('div');
+    debugInfo.id = 'debug-info';
+    
+    debugWindow.appendChild(testFillButton);
+    debugWindow.appendChild(debugInfo);
+    document.body.appendChild(debugWindow);
+  }
+
+  const hotelList = (hotels || []).map((hotel, index) => {
+    return `
+Hotel ${index + 1}:
+  Name: ${hotel?.name || 'Not available'}
+  Address: ${hotel?.formatted_address || 'Not available'}
+    `;
+  }).join('\n') || 'No hotels found';
+
+  // Update the existing debug info div
+  const debugInfo = debugWindow.querySelector('#debug-info');
+  debugInfo.innerHTML = `
+    <h3>Debug Info:</h3>
+    <pre>
+User Input:
+  Points of Interest:
+    1. ${(userData?.pointsOfInterest?.[0]) || 'Not set'}
+    2. ${(userData?.pointsOfInterest?.[1]) || 'Not set'}
+    3. ${(userData?.pointsOfInterest?.[2]) || 'Not set'}
+  Start: ${userData?.startDate || 'Not set'}
+  End: ${userData?.endDate || 'Not set'}
+  Budget: ${userData?.budget || 'Not set'}
+
+Hotels Found:
+${hotelList}
+    </pre>
+  `;
+}
+
+function fillTestData() {
+    document.getElementById('city').value = 'San Francisco';
+    document.getElementById('poi1').value = 'Golden Gate Bridge';
+    document.getElementById('poi2').value = 'Fisherman\'s Wharf';
+    document.getElementById('poi3').value = 'Painted Ladies';
+    document.getElementById('start-date').value = '2024-12-25';
+    document.getElementById('end-date').value = '2024-12-27';
+    document.getElementById('budget').value = '300';
+}
+
