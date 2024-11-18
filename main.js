@@ -71,6 +71,24 @@ function initApp() {
     runPrompt();
   });
 
+// Add event listeners for Z and X keys
+document.addEventListener('keydown', function (e) {
+    const mapElement = document.querySelector('gmp-map-3d');
+    if (!mapElement) return;
+
+    let currentHeading = parseFloat(mapElement.getAttribute('heading')) || 0;
+
+    if (e.key === 'x' || e.key === 'X') {
+      // Turn gaze to the left
+      currentHeading = (currentHeading - 1 + 360) % 360; // Decrease heading, wrap around
+      mapElement.setAttribute('heading', currentHeading);
+    } else if (e.key === 'z' || e.key === 'Z') {
+      // Turn gaze to the right
+      currentHeading = (currentHeading + 1) % 360; // Increase heading, wrap around
+      mapElement.setAttribute('heading', currentHeading);
+    }
+  });
+
   // Update the debug window
   updateDebugWindow();
 }
@@ -94,19 +112,20 @@ function collectUserData() {
   userData.endDate = endDateInput.value;
   userData.budget = parseFloat(budgetInput.value);
   console.log("User Data:", userData);
+  updateDebugWindow();
 }
 
 // GEMINI AI - Get hotel address
 const genAI = new GoogleGenerativeAI(googleGeminiApiKey);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
 async function runPrompt() {
   try {
-    const prompt = `what is the address for Hotel Kabuki in ${userData.city}? Output only the address.`;
+    const prompt = `Recommend a hotel in ${userData.city} that costs less than ${userData.budget} per night. Select one that is convenient to the following points of interest: ${userData.pointsOfInterest.join(', ')}.Respond with the address only, in the format "Street address, City, State Zip Code". Don't include any other text. For example, "2101 Sutter St, San Francisco, CA 94115."is a good answer.`;
     const response = await model.generateContent(prompt);
     hotelAddress = response.response.candidates[0].content.parts[0].text;
 
-    console.log("The address for Hotel Kabuki is:", hotelAddress);
+    console.log("The address for the recommended hotel is:", hotelAddress);
     initMapWithHotel(hotelAddress);
   } catch (error) {
     console.error("Error generating text:", error);
@@ -125,7 +144,7 @@ async function initMapWithHotel(hotelAddress) {
       const hotelLatLngAlt = {
         lat: location.lat(),
         lng: location.lng(),
-        altitude: 100 // Set to an arbitrary altitude in meters
+        altitude: 2//Set to an arbitrary altitude in meters
       };
 
       load3DMap(hotelLatLngAlt);
@@ -143,8 +162,10 @@ async function load3DMap(center) {
 
   const mapElement = document.createElement('gmp-map-3d');
   mapElement.setAttribute('center', `${center.lat},${center.lng}`);
-  mapElement.setAttribute('tilt', '45');
-  mapElement.setAttribute('range', '500');
+  mapElement.setAttribute('tilt', '75');
+  mapElement.setAttribute('range', '350');
+  mapElement.setAttribute('heading', '0');
+  mapElement.setAttribute('roll', '0');
   mapElement.setAttribute('max-altitude', '63170000');
   mapElement.setAttribute('map-type-id', 'satellite');
   mapElement.setAttribute('default-labels-disabled', 'false');
@@ -268,4 +289,5 @@ function fillTestData() {
   document.getElementById('start-date').value = '2024-12-25';
   document.getElementById('end-date').value = '2024-12-27';
   document.getElementById('budget').value = '300';
+  collectUserData();
 }
