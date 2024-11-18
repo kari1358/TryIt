@@ -139,6 +139,8 @@ async function initMapWithHotel(hotelAddress) {
 
 async function load3DMap(center) {
   // Create the 3D Map as a Web Component
+  //map = document.getElementById('map-container');
+
   const mapElement = document.createElement('gmp-map-3d');
   mapElement.setAttribute('center', `${center.lat},${center.lng}`);
   mapElement.setAttribute('tilt', '45');
