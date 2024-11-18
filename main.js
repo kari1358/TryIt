@@ -1,16 +1,17 @@
 // main.js
 // Import the Google Generative AI client
 import { GoogleGenerativeAI } from "@google/generative-ai";
+
 // Global Variables
 let hotels = [];
 let currentHotelIndex = 0;
 let userData = {};
 let debugWindow;
+let hotelAddress; // Variable to store hotel address
 
 // Access the environment variables
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const googleGeminiApiKey = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY;
-
 
 // Initialize the application after the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function () {
@@ -30,7 +31,7 @@ function loadGoogleMapsScript() {
     return;
   }
   const script = document.createElement('script');
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=maps3d&v=alpha`;
   script.async = true;
   script.defer = true;
   script.onload = () => {
@@ -67,11 +68,11 @@ function initApp() {
     collectUserData();
     hideElement('trip-intake');
     showElement('map-container');
-    initMapAndFindHotels();
+    runPrompt();
   });
 
-// Update the debug window
-updateDebugWindow();
+  // Update the debug window
+  updateDebugWindow();
 }
 
 function collectUserData() {
@@ -95,66 +96,69 @@ function collectUserData() {
   console.log("User Data:", userData);
 }
 
-function initMapAndFindHotels() {
-    runPrompt();
-    //geocodePointsOfInterest();
-}
-
-////GEMINI////
-// Initialize the client with your API key
+// GEMINI AI - Get hotel address
 const genAI = new GoogleGenerativeAI(googleGeminiApiKey);
-
-// Get the specific model you want to use
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-// Define an async function to run the prompt
 async function runPrompt() {
   try {
     const prompt = `what is the address for Hotel Kabuki in ${userData.city}? Output only the address.`;
-    // Generate text using the model and your prompt
-    //const response = await model.generateText({ prompt: prompt });
     const response = await model.generateContent(prompt);
-    //TODO: figure out how to get the text from the response
+    hotelAddress = response.response.candidates[0].content.parts[0].text;
 
-    // **Store the generated text in a variable**
-    const hotelAddress = response.response.candidates[0].content.parts[0].text; 
-    
-
-    // **Now you can use hotelAddress in the rest of your code**
-    console.log("The address for Hotel Kabuki is:", hotelAddress); 
-
+    console.log("The address for Hotel Kabuki is:", hotelAddress);
+    initMapWithHotel(hotelAddress);
   } catch (error) {
     console.error("Error generating text:", error);
   }
 }
 
-//TODO: Use hotelAddress in findHotels()
+async function initMapWithHotel(hotelAddress) {
+  // Using Google Maps Places API to geocode the address into latitude, longitude, and altitude
+  const geocoder = new google.maps.Geocoder();
+  try {
+    const result = await geocoder.geocode({ address: hotelAddress });
+    if (result && result.results.length > 0) {
+      const location = result.results[0].geometry.location;
 
-function initMapWithHotel(hotel) {
-    runPrompt();
-    //TODO: Confirm this is the right place for this function
-  const center = {
-    lat: hotel.geometry.location.lat,
-    lng: hotel.geometry.location.lng,
-  };
+      // Defining latitude, longitude, and setting an arbitrary altitude for the 3D map
+      const hotelLatLngAlt = {
+        lat: location.lat(),
+        lng: location.lng(),
+        altitude: 100 // Set to an arbitrary altitude in meters
+      };
 
-  const mapOptions = {
-    center: center,
-    zoom: 18, // High zoom level
-    mapTypeId: 'satellite',
-    tilt: 45
-  };
+      load3DMap(hotelLatLngAlt);
+    } else {
+      console.error("Geocoding failed, no results found.");
+    }
+  } catch (error) {
+    console.error("Geocoding error:", error);
+  }
+}
 
-  const map = new google.maps.Map(document.getElementById('map'), mapOptions);
+async function load3DMap(center) {
+  // Create the 3D Map as a Web Component
+  const mapElement = document.createElement('gmp-map-3d');
+  mapElement.setAttribute('center', `${center.lat},${center.lng}`);
+  mapElement.setAttribute('tilt', '45');
+  mapElement.setAttribute('range', '500');
+  mapElement.setAttribute('max-altitude', '63170000');
+  mapElement.setAttribute('map-type-id', 'satellite');
+  mapElement.setAttribute('default-labels-disabled', 'false');
+  mapElement.setAttribute('default-ui-disabled', 'false');
+  mapElement.style.height = '100%';
+  mapElement.style.width = '100%';
 
-  // Add a marker for the hotel
-  new google.maps.Marker({
-    position: center,
-    map: map,
-    title: hotel.name,
-  });
+  document.getElementById('map-container').appendChild(mapElement);
 
-  console.log("Map initialized with hotel:", hotel.name);
+  // Create a Marker for the hotel
+  const markerElement = document.createElement('gmp-marker-3d');
+  markerElement.setAttribute('position', `${center.lat},${center.lng}`);
+  markerElement.setAttribute('label', 'Hotel Kabuki');
+  mapElement.appendChild(markerElement);
+
+  console.log("3D Map initialized with hotel marker at:", center);
 }
 
 function hideElement(id) {
@@ -162,13 +166,34 @@ function hideElement(id) {
 }
 
 function showElement(id) {
-  document.getElementById(id).style.display = 'block';
-}
+    const element = document.getElementById(id);
+    if (id === 'map-container') {
+      // Reset body and html styles to ensure full coverage
+      document.body.style.margin = '0';
+      document.body.style.padding = '0';
+      document.body.style.overflow = 'hidden'; // Prevents scrollbars
+      
+      // Make map container fullscreen
+      element.style.cssText = `
+        display: flex;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+        z-index: 999;
+      `;
+    } else {
+      element.style.display = 'block';
+    }
+  }
 
 function updateDebugWindow() {
   if (!debugWindow) {
     debugWindow = document.createElement('div');
-    
+
     // Add test fill button
     const testFillButton = document.createElement('button');
     testFillButton.textContent = 'Fill Test Data (SF)';
@@ -183,7 +208,7 @@ function updateDebugWindow() {
       font-family: sans-serif;
     `;
     testFillButton.onclick = fillTestData;
-    
+
     debugWindow.style.cssText = `
       position: fixed;
       top: 10px;
@@ -197,11 +222,10 @@ function updateDebugWindow() {
       max-width: 300px;
       z-index: 1000;
     `;
-    
-    // Create a container for the debug info that we'll update later
+
     const debugInfo = document.createElement('div');
     debugInfo.id = 'debug-info';
-    
+
     debugWindow.appendChild(testFillButton);
     debugWindow.appendChild(debugInfo);
     document.body.appendChild(debugWindow);
@@ -215,7 +239,6 @@ Hotel ${index + 1}:
     `;
   }).join('\n') || 'No hotels found';
 
-  // Update the existing debug info div
   const debugInfo = debugWindow.querySelector('#debug-info');
   debugInfo.innerHTML = `
     <h3>Debug Info:</h3>
@@ -236,12 +259,11 @@ ${hotelList}
 }
 
 function fillTestData() {
-    document.getElementById('city').value = 'San Francisco';
-    document.getElementById('poi1').value = 'Golden Gate Bridge';
-    document.getElementById('poi2').value = 'Fisherman\'s Wharf';
-    document.getElementById('poi3').value = 'Painted Ladies';
-    document.getElementById('start-date').value = '2024-12-25';
-    document.getElementById('end-date').value = '2024-12-27';
-    document.getElementById('budget').value = '300';
+  document.getElementById('city').value = 'San Francisco';
+  document.getElementById('poi1').value = 'Golden Gate Bridge';
+  document.getElementById('poi2').value = 'Fisherman\'s Wharf';
+  document.getElementById('poi3').value = 'Painted Ladies';
+  document.getElementById('start-date').value = '2024-12-25';
+  document.getElementById('end-date').value = '2024-12-27';
+  document.getElementById('budget').value = '300';
 }
-
