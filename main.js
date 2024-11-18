@@ -75,7 +75,7 @@ updateDebugWindow();
 }
 
 function collectUserData() {
-  const city = document.getElementById('city');
+  const cityInput = document.getElementById('city');
   const poi1Input = document.getElementById('poi1');
   const poi2Input = document.getElementById('poi2');
   const poi3Input = document.getElementById('poi3');
@@ -88,6 +88,7 @@ function collectUserData() {
     poi2Input.value.trim(),
     poi3Input.value.trim()
   ];
+  userData.city = cityInput.value.trim();
   userData.startDate = startDateInput.value;
   userData.endDate = endDateInput.value;
   userData.budget = parseFloat(budgetInput.value);
@@ -95,7 +96,8 @@ function collectUserData() {
 }
 
 function initMapAndFindHotels() {
-  geocodePointsOfInterest();
+    runPrompt();
+    //geocodePointsOfInterest();
 }
 
 ////GEMINI////
@@ -108,14 +110,15 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 // Define an async function to run the prompt
 async function runPrompt() {
   try {
-    const prompt = `what is the address for Hotel Kabuki in ${userData.city}?`;
+    const prompt = `what is the address for Hotel Kabuki in ${userData.city}? Output only the address.`;
     // Generate text using the model and your prompt
     //const response = await model.generateText({ prompt: prompt });
     const response = await model.generateContent(prompt);
     //TODO: figure out how to get the text from the response
 
     // **Store the generated text in a variable**
-    const hotelAddress = response.text; 
+    const hotelAddress = response.response.candidates[0].content.parts[0].text; 
+    
 
     // **Now you can use hotelAddress in the rest of your code**
     console.log("The address for Hotel Kabuki is:", hotelAddress); 
@@ -125,99 +128,11 @@ async function runPrompt() {
   }
 }
 
-// Execute the function
-runPrompt();
-
-/*
-function geocodePointsOfInterest() {
-  const promises = userData.pointsOfInterest.map(poi => {
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(poi)}&key=${geminiApiKey}`;
-    return fetch(url)
-      .then(response => response.json())
-      .then(data => {
-        if (data.status === 'OK' && data.results.length > 0) {
-          const result = data.results[0];
-          const location = result.geometry.location;
-          let zipCode = null;
-          for (const component of result.address_components) {
-            if (component.types.includes('postal_code')) {
-              zipCode = component.long_name;
-              break;
-            }
-          }
-          return {
-            poi: poi,
-            location: location,
-            zipCode: zipCode
-          };
-        } else {
-          console.error('Geocoding API error for ', poi, ':', data.status);
-          return null;
-        }
-      })
-      .catch(error => {
-        console.error('Error fetching data from Geocoding API:', error);
-        return null;
-      });
-  });
-
-  Promise.all(promises)
-    .then(results => {
-      userData.geocodedPoints = results.filter(r => r !== null);
-      if (userData.geocodedPoints.length === 0) {
-        console.error('No valid Points of Interest were geocoded.');
-        return;
-      }
-      // Proceed to find hotels
-      findHotels();
-    });
-}
-*/
-
 //TODO: Use hotelAddress in findHotels()
 
-function findHotels() {
-  const promises = userData.geocodedPoints.map(geocodedPoint => {
-    const { location, zipCode } = geocodedPoint;
-    const query = 'hotel';
-    const type = 'lodging';
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
-      query
-    )}&location=${location.lat},${location.lng}&radius=5000&type=${type}&key=${googleMapsApiKey}`;
-
-    return fetch(url)
-      .then(response => response.json())
-      .then(data => {
-        if (data.status === 'OK' && data.results.length > 0) {
-          // For simplicity, take the first hotel
-          return data.results[0];
-        } else {
-          console.error('Text Search request was not successful:', data.status);
-          return null;
-        }
-      })
-      .catch(error => {
-        console.error('Error fetching data from Places API:', error);
-        return null;
-      });
-  });
-
-  Promise.all(promises)
-    .then(results => {
-      hotels = results.filter(hotel => hotel !== null);
-      if (hotels.length === 0) {
-        console.error('No hotels found for the given Points of Interest.');
-        return;
-      }
-      console.log("Hotels found:", hotels);
-      // Initialize map with first hotel
-      initMapWithHotel(hotels[0]);
-      // Update the debug window
-      updateDebugWindow();
-    });
-}
-
 function initMapWithHotel(hotel) {
+    runPrompt();
+    //TODO: Confirm this is the right place for this function
   const center = {
     lat: hotel.geometry.location.lat,
     lng: hotel.geometry.location.lng,
