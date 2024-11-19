@@ -89,6 +89,40 @@ document.addEventListener('keydown', function (e) {
     }
   });
 
+//Add event listener for arrow Keys
+document.addEventListener('keydown', function (e) {
+    const mapElement = document.querySelector('gmp-map-3d');
+    if (!mapElement) return;
+  
+    // Get current center or default to 0,0
+    const currentCenter = mapElement.getAttribute('center')?.split(',').map(Number) || [0, 0];
+    let [currentLat, currentLng] = currentCenter;
+  
+    const step = 0.0001; // Adjust step size for latitude and longitude changes
+  
+    switch (e.key) {
+      case 'ArrowUp': // Move center north
+        currentLat += step;
+        break;
+      case 'ArrowDown': // Move center south
+        currentLat -= step;
+        break;
+      case 'ArrowLeft': // Move center west
+        currentLng -= step;
+        break;
+      case 'ArrowRight': // Move center east
+        currentLng += step;
+        break;
+      default:
+        return; // Ignore other keys
+    }
+  
+    // Update the center attribute of the map
+    mapElement.setAttribute('center', `${currentLat},${currentLng}`);
+    
+  });
+  
+//TODO: confirm that this is the right place for this
   // Update the debug window
   updateDebugWindow();
 }
@@ -162,8 +196,8 @@ async function load3DMap(center) {
 
   const mapElement = document.createElement('gmp-map-3d');
   mapElement.setAttribute('center', `${center.lat},${center.lng}`);
-  mapElement.setAttribute('tilt', '75');
-  mapElement.setAttribute('range', '350');
+  mapElement.setAttribute('tilt', '45');
+  mapElement.setAttribute('range', '35');
   mapElement.setAttribute('heading', '0');
   mapElement.setAttribute('roll', '0');
   mapElement.setAttribute('max-altitude', '63170000');
