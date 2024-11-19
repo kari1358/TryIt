@@ -221,13 +221,16 @@ async function load3DMap(center) {
 
   // Set the 'src' attribute to the GLTF file
   modelElement.setAttribute('src', './rubber_duck_toy.glb');
-  //modelElement.setAttribute('src', './BlenderCube.glb');
   // Set the 'position' attribute to match the map's center
-  const centerPosition = `${center.lat},${center.lng}`;
+  const centerPosition = `${center.lat},${center.lng},${center.altitude}`;
   modelElement.setAttribute('position', centerPosition);
 
-  // Set scale if needed
-  modelElement.setAttribute('scale', '2000');
+  // Set properties if needed
+  modelElement.setAttribute('scale', '70');
+
+// Rotate the model (Y keeps the duck upright)
+modelElement.setAttribute('orientation', '180,270,0');
+
 
   // Append the model to the map
   mapElement.appendChild(modelElement);
