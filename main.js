@@ -53,25 +53,40 @@ async function initializePolyline(map) {
         
         const polyline = document.createElement('gmp-polyline-3d');
         // Simplified path with higher altitude for better visibility
-        const path = [
-            { lat: 37.805961968043924, lng: -122.40440834335915, altitude: 500 },
-            { lat: 37.80888639205587, lng: -122.40980494791533, altitude: 500 }
-        ];
 
-        polyline.setAttribute('path', JSON.stringify(path));
-        polyline.setAttribute('stroke-color', '#FF0000');
-        polyline.setAttribute('stroke-weight', '500');
-        polyline.setAttribute('stroke-opacity', '1.0');
+        //polyline.setAttribute('coordinates', path);
+        //polyline.setAttribute('stroke-color', '#FF0000');
+        polyline.setAttribute('stroke-color', "rgba(25, 102, 210, 0.75)");
+        polyline.setAttribute('stroke-width', '10');
+        //polyline.setAttribute('stroke-opacity', '1.0');
         polyline.setAttribute('altitude-mode', 'relative-to-ground');
         polyline.setAttribute('geodesic', 'true');
 
-        // Add these debug logs
         console.log('Adding polyline to map');
-        console.log('Path:', path);
+        //console.log('Path:', path);
         console.log('Map element:', map);
 
         map.appendChild(polyline);
+
+        const polyline2 = document.querySelector('gmp-polyline-3d');
+
+      customElements.whenDefined(polyline2.localName).then(() => {
+        polyline2.coordinates = [
+          {lat: 37.80515638571346, lng: -122.4032569467164},
+          {lat: 37.80337073509504, lng: -122.4012878349353},
+          {lat: 37.79925208843463, lng: -122.3976697250461},
+          {lat: 37.7989102378512, lng: -122.3983408725656},
+          {lat: 37.79887832784348, lng: -122.3987094864192},
+          {lat: 37.79786443410338, lng: -122.4066878788802},
+          {lat: 37.79549248916587, lng: -122.4032992702785},
+          {lat: 37.78861484290265, lng: -122.4019489189814},
+          {lat: 37.78618687561075, lng: -122.398969592545},
+          {lat: 37.7892310309145, lng: -122.3951458683092},
+          {lat: 37.7916358762409, lng: -122.3981969390652}
+        ];
+      });
         console.log('Polyline initialized successfully');
+
     } catch (error) {
         console.error('Error initializing polyline:', error);
     }
