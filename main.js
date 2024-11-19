@@ -9,6 +9,7 @@ let userData = {};
 let debugWindow;
 let hotelAddress; // Variable to store hotel address
 let mapElement; // Declare mapElement as a global variable
+let modelElement; // Declare modelElement as a global variable
 
 // Access the environment variables
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -96,7 +97,8 @@ function initApp() {
     if (!mapElement) return;
 
     // Get current center or default to 0,0
-    const currentCenter = mapElement.getAttribute('center')?.split(',').map(Number) || [0, 0];
+    const centerAttr = mapElement.getAttribute('center');
+    const currentCenter = centerAttr ? centerAttr.split(',').map(Number) : [0, 0];
     let [currentLat, currentLng] = currentCenter;
 
     const step = 0.0001; // Adjust step size for latitude and longitude changes
@@ -120,6 +122,11 @@ function initApp() {
 
     // Update the center attribute of the map
     mapElement.setAttribute('center', `${currentLat},${currentLng}`);
+
+    // Update the position attribute of the model to match the new center
+    if (modelElement) {
+      modelElement.setAttribute('position', `${currentLat},${currentLng}`);
+    }
   });
 
   // Set up an interval to update the debug window every second
@@ -190,6 +197,9 @@ async function initMapWithHotel(hotelAddress) {
 }
 
 async function load3DMap(center) {
+  // Import the maps3d library
+  const { Map3DElement, Model3DElement } = await google.maps.importLibrary("maps3d");
+
   // Create the 3D Map as a Web Component
   mapElement = document.createElement('gmp-map-3d'); // Assign to the global mapElement
   mapElement.setAttribute('center', `${center.lat},${center.lng}`);
@@ -206,13 +216,23 @@ async function load3DMap(center) {
 
   document.getElementById('map-container').appendChild(mapElement);
 
-  // Create a Marker for the hotel
-  const markerElement = document.createElement('gmp-marker-3d');
-  markerElement.setAttribute('position', `${center.lat},${center.lng}`);
-  markerElement.setAttribute('label', 'Hotel Kabuki');
-  mapElement.appendChild(markerElement);
+  // Create the Model3DElement (gmp-model-3d) for the rubber duck
+  modelElement = document.createElement('gmp-model-3d'); // Assign to global variable
 
-  console.log("3D Map initialized with hotel marker at:", center);
+  // Set the 'src' attribute to the GLTF file
+  modelElement.setAttribute('src', './rubber_duck_toy.glb');
+  //modelElement.setAttribute('src', './BlenderCube.glb');
+  // Set the 'position' attribute to match the map's center
+  const centerPosition = `${center.lat},${center.lng}`;
+  modelElement.setAttribute('position', centerPosition);
+
+  // Set scale if needed
+  modelElement.setAttribute('scale', '2000');
+
+  // Append the model to the map
+  mapElement.appendChild(modelElement);
+
+  console.log("3D Map initialized with rubber duck model at:", center);
 }
 
 function hideElement(id) {
