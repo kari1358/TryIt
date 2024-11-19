@@ -10,6 +10,7 @@ let debugWindow;
 let hotelAddress; // Variable to store hotel address
 let mapElement; // Declare mapElement as a global variable
 let modelElement; // Declare modelElement as a global variable
+let isDuckJumping = false;
 
 // Access the environment variables
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -126,6 +127,14 @@ function initApp() {
     // Update the position attribute of the model to match the new center
     if (modelElement) {
       modelElement.setAttribute('position', `${currentLat},${currentLng}`);
+    }
+  });
+
+  // Add space key handler for duck jumping
+  document.addEventListener('keydown', function(e) {
+    if (e.code === 'Space' && modelElement) {
+      e.preventDefault(); // Prevent page scrolling
+      jumpDuck();
     }
   });
 
@@ -369,4 +378,48 @@ function fillTestData() {
   document.getElementById('end-date').value = '2024-12-27';
   document.getElementById('budget').value = '300';
   collectUserData();
+}
+
+// Add this new function
+async function jumpDuck() {
+  // If duck is already jumping, ignore the new jump request
+  if (!modelElement || isDuckJumping) return;
+
+  // Import AltitudeMode from maps3d library
+  const { AltitudeMode } = await google.maps.importLibrary("maps3d");
+  
+  const currentPosition = modelElement.getAttribute('position').split(',');
+  const baseLatitude = currentPosition[0];
+  const baseLongitude = currentPosition[1];
+  const baseAltitude = parseFloat(currentPosition[2]) || 0;
+  const jumpHeight = 8;
+  const jumpDuration = 500;
+
+  // Set the jumping flag to true
+  isDuckJumping = true;
+
+  modelElement.setAttribute('altitude-mode', AltitudeMode.RELATIVE_TO_GROUND);
+
+  let startTime = null;
+  function animate(currentTime) {
+    if (!startTime) startTime = currentTime;
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / jumpDuration, 1);
+
+    const jumpProgress = Math.sin(progress * Math.PI);
+    const currentHeight = baseAltitude + jumpHeight * jumpProgress;
+
+    // Update position maintaining lat/lng but changing altitude
+    modelElement.setAttribute('position', `${baseLatitude},${baseLongitude},${currentHeight}`);
+
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      // Reset position and allow jumping again
+      modelElement.setAttribute('position', `${baseLatitude},${baseLongitude},${baseAltitude}`);
+      isDuckJumping = false; // Reset the jumping flag when animation is complete
+    }
+  }
+
+  requestAnimationFrame(animate);
 }
