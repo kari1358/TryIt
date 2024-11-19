@@ -44,6 +44,39 @@ function loadGoogleMapsScript() {
   document.head.appendChild(script);
 }
 
+async function initializePolyline(map) {
+    try {
+        // Wait for the map to be fully initialized
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const { Polyline3DElement } = await google.maps.importLibrary("maps3d");
+        
+        const polyline = document.createElement('gmp-polyline-3d');
+        // Simplified path with higher altitude for better visibility
+        const path = [
+            { lat: 37.805961968043924, lng: -122.40440834335915, altitude: 500 },
+            { lat: 37.80888639205587, lng: -122.40980494791533, altitude: 500 }
+        ];
+
+        polyline.setAttribute('path', JSON.stringify(path));
+        polyline.setAttribute('stroke-color', '#FF0000');
+        polyline.setAttribute('stroke-weight', '500');
+        polyline.setAttribute('stroke-opacity', '1.0');
+        polyline.setAttribute('altitude-mode', 'relative-to-ground');
+        polyline.setAttribute('geodesic', 'true');
+
+        // Add these debug logs
+        console.log('Adding polyline to map');
+        console.log('Path:', path);
+        console.log('Map element:', map);
+
+        map.appendChild(polyline);
+        console.log('Polyline initialized successfully');
+    } catch (error) {
+        console.error('Error initializing polyline:', error);
+    }
+}
+
 function initApp() {
   console.log("Initializing app...");
   const tripForm = document.getElementById('trip-form');
@@ -225,6 +258,9 @@ async function load3DMap(center) {
 
   document.getElementById('map-container').appendChild(mapElement);
 
+  // Initialize polyline after map is created
+  initializePolyline(mapElement);
+
   // Create the Model3DElement (gmp-model-3d) for the rubber duck
   modelElement = document.createElement('gmp-model-3d'); // Assign to global variable
 
@@ -246,7 +282,6 @@ modelElement.setAttribute('orientation', '180,270,0');
 
   console.log("3D Map initialized with rubber duck model at:", center);
 }
-
 function hideElement(id) {
   document.getElementById(id).style.display = 'none';
 }
@@ -379,6 +414,7 @@ function fillTestData() {
   document.getElementById('budget').value = '300';
   collectUserData();
 }
+  
 
 // Add this new function
 async function jumpDuck() {
@@ -423,3 +459,4 @@ async function jumpDuck() {
 
   requestAnimationFrame(animate);
 }
+
