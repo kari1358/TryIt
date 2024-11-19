@@ -8,6 +8,7 @@ let currentHotelIndex = 0;
 let userData = {};
 let debugWindow;
 let hotelAddress; // Variable to store hotel address
+let mapElement; // Declare mapElement as a global variable
 
 // Access the environment variables
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -71,8 +72,8 @@ function initApp() {
     runPrompt();
   });
 
-// Add event listeners for Z and X keys
-document.addEventListener('keydown', function (e) {
+  // Add event listeners for Z and X keys
+  document.addEventListener('keydown', function (e) {
     const mapElement = document.querySelector('gmp-map-3d');
     if (!mapElement) return;
 
@@ -89,17 +90,17 @@ document.addEventListener('keydown', function (e) {
     }
   });
 
-//Add event listener for arrow Keys
-document.addEventListener('keydown', function (e) {
+  // Add event listener for arrow Keys
+  document.addEventListener('keydown', function (e) {
     const mapElement = document.querySelector('gmp-map-3d');
     if (!mapElement) return;
-  
+
     // Get current center or default to 0,0
     const currentCenter = mapElement.getAttribute('center')?.split(',').map(Number) || [0, 0];
     let [currentLat, currentLng] = currentCenter;
-  
+
     const step = 0.0001; // Adjust step size for latitude and longitude changes
-  
+
     switch (e.key) {
       case 'ArrowUp': // Move center north
         currentLat += step;
@@ -116,15 +117,13 @@ document.addEventListener('keydown', function (e) {
       default:
         return; // Ignore other keys
     }
-  
+
     // Update the center attribute of the map
     mapElement.setAttribute('center', `${currentLat},${currentLng}`);
-    
   });
-  
-//TODO: confirm that this is the right place for this
-  // Update the debug window
-  updateDebugWindow();
+
+  // Set up an interval to update the debug window every second
+  setInterval(updateDebugWindow, 1000);
 }
 
 function collectUserData() {
@@ -178,7 +177,7 @@ async function initMapWithHotel(hotelAddress) {
       const hotelLatLngAlt = {
         lat: location.lat(),
         lng: location.lng(),
-        altitude: 2//Set to an arbitrary altitude in meters
+        altitude: 2 // Set to an arbitrary altitude in meters
       };
 
       load3DMap(hotelLatLngAlt);
@@ -192,9 +191,7 @@ async function initMapWithHotel(hotelAddress) {
 
 async function load3DMap(center) {
   // Create the 3D Map as a Web Component
-  //map = document.getElementById('map-container');
-
-  const mapElement = document.createElement('gmp-map-3d');
+  mapElement = document.createElement('gmp-map-3d'); // Assign to the global mapElement
   mapElement.setAttribute('center', `${center.lat},${center.lng}`);
   mapElement.setAttribute('tilt', '45');
   mapElement.setAttribute('range', '35');
@@ -223,29 +220,29 @@ function hideElement(id) {
 }
 
 function showElement(id) {
-    const element = document.getElementById(id);
-    if (id === 'map-container') {
-      // Reset body and html styles to ensure full coverage
-      document.body.style.margin = '0';
-      document.body.style.padding = '0';
-      document.body.style.overflow = 'hidden'; // Prevents scrollbars
-      
-      // Make map container fullscreen
-      element.style.cssText = `
-        display: flex;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        margin: 0;
-        padding: 0;
-        z-index: 999;
-      `;
-    } else {
-      element.style.display = 'block';
-    }
+  const element = document.getElementById(id);
+  if (id === 'map-container') {
+    // Reset body and html styles to ensure full coverage
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.overflow = 'hidden'; // Prevents scrollbars
+
+    // Make map container fullscreen
+    element.style.cssText = `
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      z-index: 999;
+    `;
+  } else {
+    element.style.display = 'block';
   }
+}
 
 function updateDebugWindow() {
   if (!debugWindow) {
@@ -296,6 +293,23 @@ Hotel ${index + 1}:
     `;
   }).join('\n') || 'No hotels found';
 
+  // Get mapElement properties
+  let center = 'Not available';
+  let tilt = 'Not available';
+  let range = 'Not available';
+  let heading = 'Not available';
+  let roll = 'Not available';
+  let altitude = 'Not available';
+
+  if (mapElement) {
+    center = mapElement.getAttribute('center') || 'Not available';
+    tilt = mapElement.getAttribute('tilt') || 'Not available';
+    range = mapElement.getAttribute('range') || 'Not available';
+    heading = mapElement.getAttribute('heading') || 'Not available';
+    roll = mapElement.getAttribute('roll') || 'Not available';
+    altitude = mapElement.getAttribute('altitude') || 'Not available';
+  }
+
   const debugInfo = debugWindow.querySelector('#debug-info');
   debugInfo.innerHTML = `
     <h3>Debug Info:</h3>
@@ -311,6 +325,14 @@ User Input:
 
 Hotels Found:
 ${hotelList}
+
+Map Properties:
+  Center: ${center}
+  Tilt: ${tilt}
+  Range: ${range}
+  Heading: ${heading}
+  Roll: ${roll}
+  Altitude: ${altitude}
     </pre>
   `;
 }
