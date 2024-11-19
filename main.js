@@ -3,11 +3,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Global Variables
-let hotels = [];
-let currentHotelIndex = 0;
 let userData = {};
-let debugWindow;
-let hotelAddress; // Variable to store hotel address
+let DebugMenu;
 let mapElement; // Declare mapElement as a global variable
 let modelElement; // Declare modelElement as a global variable
 let isDuckJumping = false;
@@ -16,10 +13,26 @@ let isDuckJumping = false;
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const googleGeminiApiKey = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY;
 
+// Define the points for each city at the top with your other global variables
+const CITY_ROUTES = {
+  'San Francisco': {
+    pointA: { lat: 37.79543308513136, lng: -122.39361334843221 },  // Ferry Building
+    pointB: { lat: 37.799383474936754, lng: -122.39729187503059 },   // The Waterfront Restaurant
+    pointC: { lat: 37.80868132329467, lng: -122.40981591306831 },   // Pier 39
+    pointD: { lat: 37.80779371839239, lng: -122.41850672465118 }     // In-N-Out Burger
+  },
+  'New York': {
+    pointA: { lat: 40.758026852884356, lng: -73.9855368349365 },  // Times Square
+    pointB: { lat: 40.766629072315624, lng: -73.97862718783752 },  // JW Marriott Essex House New York
+    pointC: { lat: 40.76771174318794, lng: -73.97198993582306 },  // Central Park Zoo
+    pointD: { lat: 40.76029891365873, lng: -73.96515652391855 }   // LaVista Pizza (2nd Avenue)
+  }
+};
+
 // Initialize the application after the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function () {
   console.log("DOM fully loaded");
-  updateDebugWindow();
+//  updateDebugWindow();
   loadGoogleMapsScript();
 });
 
@@ -44,7 +57,8 @@ function loadGoogleMapsScript() {
   document.head.appendChild(script);
 }
 
-async function initializePolyline(map) {
+// Update initializePolyline to use the predefined points
+async function initializePolyline(map, city) {
     try {
         // Wait for the map to be fully initialized
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -52,10 +66,16 @@ async function initializePolyline(map) {
         const { Polyline3DElement } = await google.maps.importLibrary("maps3d");
         
         const polyline = document.createElement('gmp-polyline-3d');
-        // Simplified path with higher altitude for better visibility
+        
+        // Get the route points for the selected city
+        const route = CITY_ROUTES[city];
+        const path = [
+            { lat: route.pointA.lat, lng: route.pointA.lng, altitude: 5 },
+            { lat: route.pointB.lat, lng: route.pointB.lng, altitude: 5 },
+            { lat: route.pointC.lat, lng: route.pointC.lng, altitude: 5 },
+            { lat: route.pointD.lat, lng: route.pointD.lng, altitude: 5 }
+        ];
 
-        //polyline.setAttribute('coordinates', path);
-        //polyline.setAttribute('stroke-color', '#FF0000');
         polyline.setAttribute('stroke-color', "rgba(25, 102, 210, 0.75)");
         polyline.setAttribute('stroke-width', '10');
         //polyline.setAttribute('stroke-opacity', '1.0');
@@ -70,23 +90,11 @@ async function initializePolyline(map) {
 
         const polyline2 = document.querySelector('gmp-polyline-3d');
 
-      customElements.whenDefined(polyline2.localName).then(() => {
-        polyline2.coordinates = [
-          {lat: 37.80515638571346, lng: -122.4032569467164},
-          {lat: 37.80337073509504, lng: -122.4012878349353},
-          {lat: 37.79925208843463, lng: -122.3976697250461},
-          {lat: 37.7989102378512, lng: -122.3983408725656},
-          {lat: 37.79887832784348, lng: -122.3987094864192},
-          {lat: 37.79786443410338, lng: -122.4066878788802},
-          {lat: 37.79549248916587, lng: -122.4032992702785},
-          {lat: 37.78861484290265, lng: -122.4019489189814},
-          {lat: 37.78618687561075, lng: -122.398969592545},
-          {lat: 37.7892310309145, lng: -122.3951458683092},
-          {lat: 37.7916358762409, lng: -122.3981969390652}
-        ];
-      });
-        console.log('Polyline initialized successfully');
+        customElements.whenDefined(polyline2.localName).then(() => {
+            polyline2.coordinates = path;
+        });
 
+        console.log('Polyline initialized successfully for', city);
     } catch (error) {
         console.error('Error initializing polyline:', error);
     }
@@ -101,7 +109,7 @@ function initApp() {
   }
 
   // Customize input styles for better UX
-  const inputs = ['city', 'start-date', 'end-date', 'poi1', 'poi2', 'poi3', 'budget'].map(id =>
+  const inputs = ['city'].map(id =>
     document.getElementById(id)
   );
   inputs.forEach(input => {
@@ -119,7 +127,6 @@ function initApp() {
     collectUserData();
     hideElement('trip-intake');
     showElement('map-container');
-    runPrompt();
   });
 
   // Add event listeners for Z and X keys
@@ -139,6 +146,9 @@ function initApp() {
       mapElement.setAttribute('heading', currentHeading);
     }
   });
+
+
+///Keyboard Controls
 
   // Add event listener for arrow Keys
   document.addEventListener('keydown', function (e) {
@@ -187,116 +197,62 @@ function initApp() {
   });
 
   // Set up an interval to update the debug window every second
-  setInterval(updateDebugWindow, 1000);
+ // setInterval(updateDebugWindow, 1000);
+
+  updateDebugMenu();
 }
 
 function collectUserData() {
   const cityInput = document.getElementById('city');
-  const poi1Input = document.getElementById('poi1');
-  const poi2Input = document.getElementById('poi2');
-  const poi3Input = document.getElementById('poi3');
-  const startDateInput = document.getElementById('start-date');
-  const endDateInput = document.getElementById('end-date');
-  const budgetInput = document.getElementById('budget');
-
-  userData.pointsOfInterest = [
-    poi1Input.value.trim(),
-    poi2Input.value.trim(),
-    poi3Input.value.trim()
-  ];
   userData.city = cityInput.value.trim();
-  userData.startDate = startDateInput.value;
-  userData.endDate = endDateInput.value;
-  userData.budget = parseFloat(budgetInput.value);
   console.log("User Data:", userData);
-  updateDebugWindow();
+  updateDebugMenu();
 }
 
-// GEMINI AI - Get hotel address
-const genAI = new GoogleGenerativeAI(googleGeminiApiKey);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
-async function runPrompt() {
-  try {
-    const prompt = `Recommend a hotel in ${userData.city} that costs less than ${userData.budget} per night. Select one that is convenient to the following points of interest: ${userData.pointsOfInterest.join(', ')}.Respond with the address only, in the format "Street address, City, State Zip Code". Don't include any other text. For example, "2101 Sutter St, San Francisco, CA 94115."is a good answer.`;
-    const response = await model.generateContent(prompt);
-    hotelAddress = response.response.candidates[0].content.parts[0].text;
-
-    console.log("The address for the recommended hotel is:", hotelAddress);
-    initMapWithHotel(hotelAddress);
-  } catch (error) {
-    console.error("Error generating text:", error);
-  }
-}
-
-async function initMapWithHotel(hotelAddress) {
-  // Using Google Maps Places API to geocode the address into latitude, longitude, and altitude
-  const geocoder = new google.maps.Geocoder();
-  try {
-    const result = await geocoder.geocode({ address: hotelAddress });
-    if (result && result.results.length > 0) {
-      const location = result.results[0].geometry.location;
-
-      // Defining latitude, longitude, and setting an arbitrary altitude for the 3D map
-      const hotelLatLngAlt = {
-        lat: location.lat(),
-        lng: location.lng(),
-        altitude: 2 // Set to an arbitrary altitude in meters
-      };
-
-      load3DMap(hotelLatLngAlt);
-    } else {
-      console.error("Geocoding failed, no results found.");
+/// 3D Map
+async function load3DMap(city) {
+    const cityRoute = CITY_ROUTES[city];
+    if (!cityRoute) {
+        console.error('City route not found');
+        return;
     }
-  } catch (error) {
-    console.error("Geocoding error:", error);
-  }
+
+    const { Map3DElement, Model3DElement } = await google.maps.importLibrary("maps3d");
+
+    mapElement = document.createElement('gmp-map-3d');
+    
+    // Center on pointA of the selected city
+    const center = cityRoute.pointA;
+    const latitude = center.lat;
+    const longitude = center.lng;
+    mapElement.setAttribute('center', latitude + "," + longitude);
+    mapElement.setAttribute('tilt', '75');
+    mapElement.setAttribute('range', '145');
+    mapElement.setAttribute('heading', '0');
+    mapElement.setAttribute('roll', '0');
+    mapElement.setAttribute('max-altitude', '63170000');
+    mapElement.setAttribute('map-type-id', 'satellite');
+    mapElement.setAttribute('default-labels-disabled', 'false');
+    mapElement.setAttribute('default-ui-disabled', 'false');
+    mapElement.style.height = '100%';
+    mapElement.style.width = '100%';
+
+    document.getElementById('map-container').appendChild(mapElement);
+
+    // Initialize polyline with the selected city
+    await initializePolyline(mapElement, city);
+
+    // Update duck position to start at pointA
+    modelElement = document.createElement('gmp-model-3d');
+    modelElement.setAttribute('src', './rubber_duck_toy.glb');
+    modelElement.setAttribute('position', `${center.lat},${center.lng}`);
+    modelElement.setAttribute('scale', '70');
+    modelElement.setAttribute('orientation', '180,270,0');
+    mapElement.appendChild(modelElement);
+    console.log("3D Map initialized with rubber duck model at:", center);
 }
 
-async function load3DMap(center) {
-  // Import the maps3d library
-  const { Map3DElement, Model3DElement } = await google.maps.importLibrary("maps3d");
-
-  // Create the 3D Map as a Web Component
-  mapElement = document.createElement('gmp-map-3d'); // Assign to the global mapElement
-  mapElement.setAttribute('center', `${center.lat},${center.lng}`);
-  mapElement.setAttribute('tilt', '75');
-  mapElement.setAttribute('range', '145');
-  mapElement.setAttribute('heading', '0');
-  mapElement.setAttribute('roll', '0');
-  mapElement.setAttribute('max-altitude', '63170000');
-  mapElement.setAttribute('map-type-id', 'satellite');
-  mapElement.setAttribute('default-labels-disabled', 'false');
-  mapElement.setAttribute('default-ui-disabled', 'false');
-  mapElement.style.height = '100%';
-  mapElement.style.width = '100%';
-
-  document.getElementById('map-container').appendChild(mapElement);
-
-  // Initialize polyline after map is created
-  initializePolyline(mapElement);
-
-  // Create the Model3DElement (gmp-model-3d) for the rubber duck
-  modelElement = document.createElement('gmp-model-3d'); // Assign to global variable
-
-  // Set the 'src' attribute to the GLTF file
-  modelElement.setAttribute('src', './rubber_duck_toy.glb');
-  // Set the 'position' attribute to match the map's center
-  const centerPosition = `${center.lat},${center.lng},${center.altitude}`;
-  modelElement.setAttribute('position', centerPosition);
-
-  // Set properties if needed
-  modelElement.setAttribute('scale', '70');
-
-// Rotate the model (Y keeps the duck upright)
-modelElement.setAttribute('orientation', '180,270,0');
-
-
-  // Append the model to the map
-  mapElement.appendChild(modelElement);
-
-  console.log("3D Map initialized with rubber duck model at:", center);
-}
 function hideElement(id) {
   document.getElementById(id).style.display = 'none';
 }
@@ -324,56 +280,7 @@ function showElement(id) {
   } else {
     element.style.display = 'block';
   }
-}
-
-function updateDebugWindow() {
-  if (!debugWindow) {
-    debugWindow = document.createElement('div');
-
-    // Add test fill button
-    const testFillButton = document.createElement('button');
-    testFillButton.textContent = 'Fill Test Data (SF)';
-    testFillButton.style.cssText = `
-      background: #4CAF50;
-      color: white;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-bottom: 10px;
-      font-family: sans-serif;
-    `;
-    testFillButton.onclick = fillTestData;
-
-    debugWindow.style.cssText = `
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      background: rgba(0, 0, 0, 0.8);
-      color: #00ff00;
-      padding: 15px;
-      border-radius: 5px;
-      font-family: monospace;
-      font-size: 14px;
-      max-width: 300px;
-      z-index: 1000;
-    `;
-
-    const debugInfo = document.createElement('div');
-    debugInfo.id = 'debug-info';
-
-    debugWindow.appendChild(testFillButton);
-    debugWindow.appendChild(debugInfo);
-    document.body.appendChild(debugWindow);
-  }
-
-  const hotelList = (hotels || []).map((hotel, index) => {
-    return `
-Hotel ${index + 1}:
-  Name: ${hotel?.name || 'Not available'}
-  Address: ${hotel?.formatted_address || 'Not available'}
-    `;
-  }).join('\n') || 'No hotels found';
+}  
 
   // Get mapElement properties
   let center = 'Not available';
@@ -392,46 +299,8 @@ Hotel ${index + 1}:
     altitude = mapElement.getAttribute('altitude') || 'Not available';
   }
 
-  const debugInfo = debugWindow.querySelector('#debug-info');
-  debugInfo.innerHTML = `
-    <h3>Debug Info:</h3>
-    <pre>
-User Input:
-  Points of Interest:
-    1. ${(userData?.pointsOfInterest?.[0]) || 'Not set'}
-    2. ${(userData?.pointsOfInterest?.[1]) || 'Not set'}
-    3. ${(userData?.pointsOfInterest?.[2]) || 'Not set'}
-  Start: ${userData?.startDate || 'Not set'}
-  End: ${userData?.endDate || 'Not set'}
-  Budget: ${userData?.budget || 'Not set'}
 
-Hotels Found:
-${hotelList}
-
-Map Properties:
-  Center: ${center}
-  Tilt: ${tilt}
-  Range: ${range}
-  Heading: ${heading}
-  Roll: ${roll}
-  Altitude: ${altitude}
-    </pre>
-  `;
-}
-
-function fillTestData() {
-  document.getElementById('city').value = 'San Francisco';
-  document.getElementById('poi1').value = 'Golden Gate Bridge';
-  document.getElementById('poi2').value = 'Fisherman\'s Wharf';
-  document.getElementById('poi3').value = 'Painted Ladies';
-  document.getElementById('start-date').value = '2024-12-25';
-  document.getElementById('end-date').value = '2024-12-27';
-  document.getElementById('budget').value = '300';
-  collectUserData();
-}
-  
-
-// Add this new function
+// Duck Jumping
 async function jumpDuck() {
   // If duck is already jumping, ignore the new jump request
   if (!modelElement || isDuckJumping) return;
@@ -475,3 +344,51 @@ async function jumpDuck() {
   requestAnimationFrame(animate);
 }
 
+
+
+///Debugging
+script.onerror = () => {
+    console.error("Failed to load Google Maps API script");
+  };
+  console.log('Map Element Attributes:', mapElement.attributes);
+  console.log('Model Element Attributes:', modelElement.attributes);  
+
+// Add this function to create and update the debug menu
+function updateDebugMenu() {
+  // Create or get existing debug menu
+  let debugMenu = document.getElementById('debug-menu');
+  if (!debugMenu) {
+    debugMenu = document.createElement('div');
+    debugMenu.id = 'debug-menu';
+    debugMenu.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      z-index: 1000;
+    `;
+    document.body.appendChild(debugMenu);
+  }
+
+  // Update content
+  const city = userData.city || 'Not selected';
+  const points = CITY_ROUTES[city] || {};
+  
+  debugMenu.innerHTML = `
+    <div><strong>City:</strong> ${city}</div>
+    <div><strong>Point A:</strong> ${formatPoint(points.pointA)}</div>
+    <div><strong>Point B:</strong> ${formatPoint(points.pointB)}</div>
+    <div><strong>Point C:</strong> ${formatPoint(points.pointC)}</div>
+    <div><strong>Point D:</strong> ${formatPoint(points.pointD)}</div>
+  `;
+}
+
+// Helper function to format point coordinates
+function formatPoint(point) {
+  if (!point) return 'N/A';
+  return `(${point.lat.toFixed(4)}, ${point.lng.toFixed(4)})`;
+}

@@ -58,6 +58,12 @@
       margin-top: 20px;   /* Add spacing from the top */
       color: #333;        /* Change text color */
     }
+
+    #trip-form select {
+      margin: 5px 0;
+      width: 200px;
+      padding: 2px;  /* To match input padding */
+    }
   </style>
 </head>
 <body>
@@ -66,13 +72,11 @@
   <h1 style="text-align: center; margin-top: 10px;">3D Travel Explorer</h1>  
   <div id="trip-intake">
     <form id="trip-form">
-      <input type="text" id="city" placeholder="City" required>
-      <input type="text" id="poi1" placeholder="Point of Interest 1" required>
-      <input type="text" id="poi2" placeholder="Point of Interest 2" required>
-      <input type="text" id="poi3" placeholder="Point of Interest 3" required>
-      <input type="date" id="start-date">
-      <input type="date" id="end-date">
-      <input type="number" id="budget" placeholder="Budget (e.g., 1000)">
+      <select id="city" required>
+        <option value="">Select a city</option>
+        <option value="San Francisco">San Francisco</option>
+        <option value="New York">New York</option>
+      </select>
       <button type="submit">Submit</button>
     </form>
   </div>
