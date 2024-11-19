@@ -203,8 +203,8 @@ async function load3DMap(center) {
   // Create the 3D Map as a Web Component
   mapElement = document.createElement('gmp-map-3d'); // Assign to the global mapElement
   mapElement.setAttribute('center', `${center.lat},${center.lng}`);
-  mapElement.setAttribute('tilt', '45');
-  mapElement.setAttribute('range', '35');
+  mapElement.setAttribute('tilt', '75');
+  mapElement.setAttribute('range', '145');
   mapElement.setAttribute('heading', '0');
   mapElement.setAttribute('roll', '0');
   mapElement.setAttribute('max-altitude', '63170000');
