@@ -276,11 +276,11 @@ async function load3DMap(city) {
 function createGemStone() {
     const gemElement = document.createElement('a-entity');
     gemElement.setAttribute('./gem.glb');
-    gemElement.setAttribute('scale', '50');
+    gemElement.setAttribute('scale', '5000');
 
     // Set position based on selected city
     const startPoint = CITY_ROUTES[userData.city].pointA;
-    gemElement.setAttribute('position', `${startPoint[0]},${startPoint[1]},0`);
+    gemElement.setAttribute('position', `${startPoint(lat)},${startPoint(lng)},0`);
 
     // Add to scene
     document.querySelector('a-scene').appendChild(gemElement);
