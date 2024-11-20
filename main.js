@@ -33,15 +33,34 @@ const CITY_ROUTES = {
 document.addEventListener('DOMContentLoaded', function () {
   console.log("DOM fully loaded");
 //  updateDebugWindow();
-  loadGoogleMapsScript();
-});
-
-function loadGoogleMapsScript() {
-  console.log("Loading Google Maps script...");
-  if (window.google && window.google.maps) {
-    initApp(); // If already loaded, initialize the app
+ // loadGoogleMapsScript();
+  const initComplete = init();
+  if (!initComplete) {
+    console.error("Failed to initialize the app");
     return;
   }
+});
+
+async function init(){
+    const loaded = await loadGoogleMapsScript();
+    if (!loaded) {
+        console.error("Failed to load Google Maps script");
+        return;
+    }
+
+    initApp();
+    const polylineLoaded = await initializePolyline(mapElement, 'San Francisco');
+    if (!polylineLoaded) {
+        console.error("Failed to initialize polyline");
+        return;
+    }
+    console.log("Initialization complete");
+    console.log('Map Element Attributes:', mapElement.attributes);
+    console.log('Model Element Attributes:', modelElement.attributes);  
+
+}
+async function loadGoogleMapsScript() {
+  console.log("Loading Google Maps script...");
   if (document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]')) {
     console.log("Google Maps script is already in the document.");
     return;
@@ -50,11 +69,8 @@ function loadGoogleMapsScript() {
   script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=maps3d&v=alpha`;
   script.async = true;
   script.defer = true;
-  script.onload = () => {
-    console.log("Google Maps API script loaded");
-    initApp();
-  };
   document.head.appendChild(script);
+  return true;
 }
 
 // Update initializePolyline to use the predefined points
@@ -70,16 +86,16 @@ async function initializePolyline(map, city) {
         // Get the route points for the selected city
         const route = CITY_ROUTES[city];
         const path = [
-            { lat: route.pointA.lat, lng: route.pointA.lng, altitude: 5 },
-            { lat: route.pointB.lat, lng: route.pointB.lng, altitude: 5 },
-            { lat: route.pointC.lat, lng: route.pointC.lng, altitude: 5 },
-            { lat: route.pointD.lat, lng: route.pointD.lng, altitude: 5 }
+            { lat: route.pointA.lat, lng: route.pointA.lng, altitude: 0.5 },
+            { lat: route.pointB.lat, lng: route.pointB.lng, altitude: 0.5 },
+            { lat: route.pointC.lat, lng: route.pointC.lng, altitude: 0.5 },
+            { lat: route.pointD.lat, lng: route.pointD.lng, altitude: 0.5 }
         ];
 
-        polyline.setAttribute('stroke-color', "rgba(25, 102, 210, 0.75)");
+        polyline.setAttribute('stroke-color', "rgba(52, 177, 226, 0.75)");
         polyline.setAttribute('stroke-width', '10');
         //polyline.setAttribute('stroke-opacity', '1.0');
-        polyline.setAttribute('altitude-mode', 'relative-to-ground');
+        polyline.setAttribute('altitude-mode', 'clamp-to-ground');
         polyline.setAttribute('geodesic', 'true');
 
         console.log('Adding polyline to map');
@@ -98,10 +114,12 @@ async function initializePolyline(map, city) {
     } catch (error) {
         console.error('Error initializing polyline:', error);
     }
+    return true;
 }
 
 function initApp() {
   console.log("Initializing app...");
+  load3DMap('San Francisco');
   const tripForm = document.getElementById('trip-form');
   if (!tripForm) {
     console.error("Trip form not found in the DOM!");
@@ -218,7 +236,7 @@ async function load3DMap(city) {
         return;
     }
 
-    const { Map3DElement, Model3DElement } = await google.maps.importLibrary("maps3d");
+    //const { Map3DElement, Model3DElement } = await google.maps.importLibrary("maps3d");
 
     mapElement = document.createElement('gmp-map-3d');
     
@@ -263,7 +281,7 @@ function showElement(id) {
     // Reset body and html styles to ensure full coverage
     document.body.style.margin = '0';
     document.body.style.padding = '0';
-    document.body.style.overflow = 'hidden'; // Prevents scrollbars
+    //document.body.style.overflow = 'hidden'; // Prevents scrollbars
 
     // Make map container fullscreen
     element.style.cssText = `
@@ -303,6 +321,7 @@ function showElement(id) {
 // Duck Jumping
 async function jumpDuck() {
   // If duck is already jumping, ignore the new jump request
+  console.log("Duck jumping:", isDuckJumping);
   if (!modelElement || isDuckJumping) return;
 
   // Import AltitudeMode from maps3d library
@@ -346,12 +365,6 @@ async function jumpDuck() {
 
 
 
-///Debugging
-script.onerror = () => {
-    console.error("Failed to load Google Maps API script");
-  };
-  console.log('Map Element Attributes:', mapElement.attributes);
-  console.log('Model Element Attributes:', modelElement.attributes);  
 
 // Add this function to create and update the debug menu
 function updateDebugMenu() {
