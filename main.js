@@ -29,36 +29,17 @@ const CITY_ROUTES = {
   }
 };
 
-// Initialize the application after the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', function () {
-  console.log("DOM fully loaded");
-//  updateDebugWindow();
- // loadGoogleMapsScript();
-  const initComplete = init();
-  if (!initComplete) {
-    console.error("Failed to initialize the app");
+document.addEventListener('DOMContentLoaded', async function () {
+  const loaded = await loadGoogleMapsScript();
+
+  if (!loaded) {
+    console.error("Failed to load Google Maps script");
     return;
   }
+
+  initApp();
 });
 
-async function init(){
-    const loaded = await loadGoogleMapsScript();
-    if (!loaded) {
-        console.error("Failed to load Google Maps script");
-        return;
-    }
-
-    initApp();
-    const polylineLoaded = await initializePolyline(mapElement, 'San Francisco');
-    if (!polylineLoaded) {
-        console.error("Failed to initialize polyline");
-        return;
-    }
-    console.log("Initialization complete");
-    console.log('Map Element Attributes:', mapElement.attributes);
-    console.log('Model Element Attributes:', modelElement.attributes);  
-
-}
 async function loadGoogleMapsScript() {
   console.log("Loading Google Maps script...");
   if (document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]')) {
@@ -119,7 +100,6 @@ async function initializePolyline(map, city) {
 
 function initApp() {
   console.log("Initializing app...");
-  load3DMap('San Francisco');
   const tripForm = document.getElementById('trip-form');
   if (!tripForm) {
     console.error("Trip form not found in the DOM!");
@@ -138,13 +118,24 @@ function initApp() {
     input.style.maxWidth = '800px';
   });
 
-  // Form submission handler
-  tripForm.addEventListener('submit', function (e) {
+  // Update the form submission handler to handle async operations
+  tripForm.addEventListener('submit', async function (e) {
     e.preventDefault();
     console.log("Trip form submitted");
     collectUserData();
     hideElement('trip-intake');
     showElement('map-container');
+    
+    // Load map and initialize elements
+    await load3DMap(userData.city);
+    const polylineLoaded = await initializePolyline(mapElement, userData.city);
+    if (!polylineLoaded) {
+        console.error("Failed to initialize polyline");
+        return;
+    }
+    
+    console.log('Map Element Attributes:', mapElement.attributes);
+    console.log('Model Element Attributes:', modelElement.attributes);
   });
 
   // Add event listeners for Z and X keys
@@ -166,8 +157,7 @@ function initApp() {
   });
 
 
-///Keyboard Controls
-
+  //Keyboard Controls
   // Add event listener for arrow Keys
   document.addEventListener('keydown', function (e) {
     const mapElement = document.querySelector('gmp-map-3d');
