@@ -74,7 +74,7 @@ async function initializePolyline(map, city) {
         ];
 
         polyline.setAttribute('stroke-color', "rgba(52, 177, 226, 0.75)");
-        polyline.setAttribute('stroke-width', '10');
+        polyline.setAttribute('stroke-width', '30');
         //polyline.setAttribute('stroke-opacity', '1.0');
         polyline.setAttribute('altitude-mode', 'clamp-to-ground');
         polyline.setAttribute('geodesic', 'true');
@@ -236,8 +236,8 @@ async function load3DMap(city) {
     const longitude = center.lng;
     mapElement.setAttribute('center', latitude + "," + longitude);
     mapElement.setAttribute('tilt', '75');
-    mapElement.setAttribute('range', '145');
-    mapElement.setAttribute('heading', '0');
+    mapElement.setAttribute('range', '200');
+    mapElement.setAttribute('heading', '20');
     mapElement.setAttribute('roll', '0');
     mapElement.setAttribute('max-altitude', '63170000');
     mapElement.setAttribute('map-type-id', 'satellite');
@@ -395,3 +395,18 @@ function formatPoint(point) {
   if (!point) return 'N/A';
   return `(${point.lat.toFixed(4)}, ${point.lng.toFixed(4)})`;
 }
+
+document.addEventListener('keydown', function (e) {
+  if (!modelElement) return;
+
+  let currentOrientation = modelElement.getAttribute('orientation').split(',');
+  let [x, y, z] = currentOrientation.map(Number);
+
+  if (e.key === 'v' || e.key === 'v') {
+    x = (x + 1) % 360;  // Increase y rotation
+  } else if (e.key === 'c' || e.key === 'c') {
+    x = (x - 1 + 360) % 360;  // Decrease y rotation
+  }
+
+  modelElement.setAttribute('orientation', `${x},${y},${z}`);
+});
