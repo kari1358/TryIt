@@ -158,38 +158,44 @@ function initApp() {
 
 
   //Keyboard Controls
-  // Add event listener for arrow Keys
   document.addEventListener('keydown', function (e) {
-    const mapElement = document.querySelector('gmp-map-3d');
-    if (!mapElement) return;
+  if (!modelElement) return;
 
-    // Get current duck position or default to 0,0
-    const positionAttr = modelElement.getAttribute('position');
-    const currentPosition = positionAttr ? positionAttr.split(',').map(Number) : [0, 0];
-    let [currentLat, currentLng] = currentPosition;
+  const positionAttr = modelElement.getAttribute('position');
+  const currentPosition = positionAttr ? positionAttr.split(',').map(Number) : [0, 0];
+  let [currentLat, currentLng] = currentPosition;
 
-    const step = 0.0001; // Adjust step size for latitude and longitude changes
+  // Get duck's orientation and add 90 degrees to compensate for the model's default orientation
+  const orientationAttr = modelElement.getAttribute('orientation');
+  const [_, yRotation] = orientationAttr.split(',').map(Number);
+  
+  // Convert heading to radians and add 90 degrees (π/2 radians)
+  const headingRad = ((yRotation + 90) * Math.PI) / 180;
+  const step = 0.0001;
 
-    switch (e.key) {
-      case 'ArrowUp': // Move duck north
-        currentLat += step;
-        break;
-      case 'ArrowDown': // Move duck south
-        currentLat -= step;
-        break;
-      case 'ArrowLeft': // Move duck west
-        currentLng -= step;
-        break;
-      case 'ArrowRight': // Move duck east
-        currentLng += step;
-        break;
-      default:
-        return; // Ignore other keys
-    }
+  switch (e.key) {
+    case 'ArrowDown': // Move backward from facing direction 
+      currentLat += step * Math.cos(headingRad);
+      currentLng += step * Math.sin(headingRad);
+      break;
+    case 'ArrowUp': // Move forward in facing direction
+      currentLat -= step * Math.cos(headingRad);
+      currentLng -= step * Math.sin(headingRad);
+      break;
+    case 'ArrowLeft': // Strafe left relative to facing direction
+      currentLat -= step * Math.sin(headingRad);
+      currentLng += step * Math.cos(headingRad);
+      break;
+    case 'ArrowRight': // Strafe right relative to facing direction
+      currentLat += step * Math.sin(headingRad);
+      currentLng -= step * Math.cos(headingRad);
+      break;
+    default:
+      return;
+  }
 
-    // Only update the duck's position
-    modelElement.setAttribute('position', `${currentLat},${currentLng}`);
-  });
+  modelElement.setAttribute('position', `${currentLat},${currentLng}`);
+});
 
   // Add space key handler for duck jumping
   document.addEventListener('keydown', function(e) {
@@ -302,7 +308,7 @@ function showElement(id) {
     altitude = mapElement.getAttribute('altitude') || 'Not available';
   }
 
-
+/*
 // Duck Jumping
 async function jumpDuck() {
   // If duck is already jumping, ignore the new jump request
@@ -348,7 +354,7 @@ async function jumpDuck() {
   requestAnimationFrame(animate);
 }
 
-
+*/
 
 
 // Add this function to create and update the debug menu
@@ -405,3 +411,84 @@ document.addEventListener('keydown', function (e) {
 
   modelElement.setAttribute('orientation', `${x},${y},${z}`);
 });
+
+let animationFrameId = null;
+let currentPathIndex = 0;
+let lastTimestamp = null;
+let isMoving = false;
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && !isMoving) {
+    isMoving = true;
+    lastTimestamp = null;
+    startDuckMovement();
+  }
+});
+
+
+function animate(timestamp) {
+    if (!lastTimestamp) lastTimestamp = timestamp;
+    const deltaTime = (timestamp - lastTimestamp) / 1000; // Convert to seconds
+    lastTimestamp = timestamp;
+
+    console.log("Animating duck... deltaTime:", deltaTime, "timestamp:", timestamp);
+
+    // Get route points for selected city
+    const route = [
+      CITY_ROUTES[userData.city].pointA,
+      CITY_ROUTES[userData.city].pointB,
+      CITY_ROUTES[userData.city].pointC,
+      CITY_ROUTES[userData.city].pointD
+    ];
+
+    if (currentPathIndex >= route.length - 1) {
+      isMoving = false;
+      return; // Stop at end of route
+    }
+
+    // Current and next points
+    const currentPoint = route[currentPathIndex];
+    const nextPoint = route[currentPathIndex + 1];
+
+    // Calculate distance between points
+    const dlat = nextPoint.lat - currentPoint.lat;
+    const dlng = nextPoint.lng - currentPoint.lng;
+    const distance = Math.sqrt(dlat * dlat + dlng * dlng);
+
+    // Calculate movement for this frame (1 meter/second)
+    const speed = 0.00001; // Approximate conversion of 1 meter to degrees
+    const step = speed * deltaTime;
+    const progress = step / distance;
+
+    // Get current position
+    const positionAttr = modelElement.getAttribute('position');
+    let [currentLat, currentLng] = positionAttr.split(',').map(Number);
+
+    // Move towards next point
+    currentLat += dlat * progress;
+    currentLng += dlng * progress;
+
+    // Check if we've reached or passed the next point
+    const distanceToNext = Math.sqrt(
+      Math.pow(nextPoint[0] - currentLat, 2) + 
+      Math.pow(nextPoint[1] - currentLng, 2)
+    );
+
+    if (distanceToNext < speed) {
+      currentPathIndex++;
+      currentLat = nextPoint[0];
+      currentLng = nextPoint[1];
+    }
+
+    // Update duck position
+    modelElement.setAttribute('position', `${currentLat},${currentLng}`);
+
+    if (isMoving) {
+      animationFrameId = requestAnimationFrame(animate);
+    }
+}
+
+function startDuckMovement() {
+  if (!modelElement) return;
+  animationFrameId = requestAnimationFrame(animate);
+}
