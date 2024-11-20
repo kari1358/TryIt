@@ -244,9 +244,9 @@ async function load3DMap(city) {
     const latitude = center.lat;
     const longitude = center.lng;
     mapElement.setAttribute('center', latitude + "," + longitude);
-    mapElement.setAttribute('tilt', '75');
-    mapElement.setAttribute('range', '200');
-    mapElement.setAttribute('heading', '20');
+    mapElement.setAttribute('tilt', '85');
+    mapElement.setAttribute('range', '177');
+    mapElement.setAttribute('heading', '-28');
     mapElement.setAttribute('roll', '0');
     mapElement.setAttribute('max-altitude', '63170000');
     mapElement.setAttribute('map-type-id', 'satellite');
@@ -256,6 +256,70 @@ async function load3DMap(city) {
     mapElement.style.width = '100%';
 
     document.getElementById('map-container').appendChild(mapElement);
+
+// Initial camera setup at the start of the animation
+const startCameraOptions = {
+    center: { 
+        lat: cityRoute.pointA.lat, 
+        lng: cityRoute.pointA.lng 
+    },
+    tilt: 73.7,
+    range: 3339,
+    heading: -21.7,
+    roll: 0,
+    maxAltitude: 6317000
+};
+
+//TODO: clean up redundant settings
+// Final camera setup after the animation ends
+const endCameraOptions = {
+    center: { 
+        lat: cityRoute.pointA.lat, 
+        lng: cityRoute.pointA.lng,
+        altitude: 50
+    },
+    tilt: 85,
+    range: 177,
+    heading: -28,
+    roll: 0
+};
+
+// Initialize the map with the starting camera position
+mapElement.setAttribute('center', `${startCameraOptions.center.lat},${startCameraOptions.center.lng}`);
+mapElement.setAttribute('tilt', startCameraOptions.tilt.toString());
+mapElement.setAttribute('range', startCameraOptions.range.toString());
+mapElement.setAttribute('heading', startCameraOptions.heading.toString());
+mapElement.setAttribute('roll', startCameraOptions.roll.toString());
+mapElement.setAttribute('max-altitude', startCameraOptions.maxAltitude.toString());
+mapElement.setAttribute('map-type-id', 'satellite');
+mapElement.setAttribute('default-labels-disabled', 'false');
+mapElement.setAttribute('default-ui-disabled', 'false');
+mapElement.style.height = '100%';
+mapElement.style.width = '100%';
+
+document.getElementById('map-container').appendChild(mapElement);
+
+// Apply the fly-around animation
+const cameraOptions = {
+    endCamera: {
+        center: endCameraOptions.center,
+        tilt: endCameraOptions.tilt,
+        range: endCameraOptions.range,
+        heading: endCameraOptions.heading,
+        roll: endCameraOptions.roll,
+    },
+    durationMillis: 5000, // 5 seconds
+};
+
+    console.log("Map is ready, starting camera animation");
+    mapElement.flyCameraTo(cameraOptions).then(() => {
+        // Set the camera to the final position after animation ends
+        mapElement.setAttribute('center', `${endCameraOptions.center.lat},${endCameraOptions.center.lng, 50}`);
+        mapElement.setAttribute('tilt', endCameraOptions.tilt);
+        mapElement.setAttribute('range', endCameraOptions.range);
+        mapElement.setAttribute('heading', endCameraOptions.heading);
+        mapElement.setAttribute('roll', endCameraOptions.roll);
+    });
 
     // Initialize polyline with the selected city
     await initializePolyline(mapElement, city);
@@ -268,29 +332,19 @@ async function load3DMap(city) {
     modelElement.setAttribute('orientation', '180,270,0');
     mapElement.appendChild(modelElement);
     console.log("3D Map initialized with rubber duck model at:", center);
+
+    // Create gem stone model
+    // Create gem model at starting position
+    const gemElement = document.createElement('gmp-model-3d');
+    gemElement.setAttribute('src', './gem.glb');
+    gemElement.setAttribute('position', `${center.lat},${center.lng},50`);
+    gemElement.setAttribute('scale', '7');
+    gemElement.setAttribute('orientation', '0,90,0');
+    mapElement.appendChild(gemElement);
+    console.log("Added gem model at:", center);
+    
 }
 
-//TODO: Troubleshoot the code
-
-// Create gem stone model
-function createGemStone() {
-    const gemElement = document.createElement('a-entity');
-    gemElement.setAttribute('./gem.glb');
-    gemElement.setAttribute('scale', '5000');
-
-    // Set position based on selected city
-    const startPoint = CITY_ROUTES[userData.city].pointA;
-    gemElement.setAttribute('position', `${startPoint(lat)},${startPoint(lng)},0`);
-
-    // Add to scene
-    document.querySelector('a-scene').appendChild(gemElement);
-    return gemElement;
-}
-
-// Add this where you handle city selection or user data initialization
-if (userData.city) {
-    createGemStone();
-}
 
 function hideElement(id) {
     document.getElementById(id).style.display = 'none';
