@@ -344,6 +344,17 @@ const cameraOptions = {
     gemElement.setAttribute('orientation', '180,20,100');
     mapElement.appendChild(gemElement);
     console.log("Added gem model at:", center);
+
+
+    // Create second gem stone model
+    const gemElement2 = document.createElement('gmp-model-3d');
+    gemElement2.setAttribute('src', './gem.glb');
+    gemElement2.setAttribute('altitude-mode', 'relative-to-ground');
+    gemElement2.setAttribute('position', `37.801003068298556,-122.39904293262651,28`);
+    gemElement2.setAttribute('scale', '50');
+    gemElement2.setAttribute('orientation', '180,15,100');
+    mapElement.appendChild(gemElement2);
+    console.log("Added second gem model");
     
 }
 
@@ -505,7 +516,7 @@ function animate(timestamp) {
     const distance = Math.sqrt(dlat * dlat + dlng * dlng);
 
     // Calculate movement for this frame (1 meter/second)
-    const speed = 0.00008; // Approximate conversion of 1 meter to degrees
+    const speed = 0.0008; // Approximate conversion of 1 meter to degrees
     const step = speed * deltaTime;
     const progress = step / distance;
 
