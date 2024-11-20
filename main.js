@@ -329,6 +329,7 @@ const cameraOptions = {
     modelElement.setAttribute('src', './rubber_duck_toy.glb');
     modelElement.setAttribute('position', `${center.lat},${center.lng}`);
     modelElement.setAttribute('scale', '70');
+    modelElement.setAttribute('altitude-mode', 'relative-to-ground');
     modelElement.setAttribute('orientation', '180,270,0');
     mapElement.appendChild(modelElement);
     console.log("3D Map initialized with rubber duck model at:", center);
@@ -337,8 +338,9 @@ const cameraOptions = {
     // Create gem model at starting position
     const gemElement = document.createElement('gmp-model-3d');
     gemElement.setAttribute('src', './gem.glb');
-    gemElement.setAttribute('position', `${center.lat},${center.lng},50`);
-    gemElement.setAttribute('scale', '7');
+    gemElement.setAttribute('altitude-mode', 'relative-to-ground');
+    gemElement.setAttribute('position', `37.7965559917908,-122.39509856819579,20`);
+    gemElement.setAttribute('scale', '30');
     gemElement.setAttribute('orientation', '0,90,0');
     mapElement.appendChild(gemElement);
     console.log("Added gem model at:", center);
