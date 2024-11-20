@@ -163,37 +163,32 @@ function initApp() {
     const mapElement = document.querySelector('gmp-map-3d');
     if (!mapElement) return;
 
-    // Get current center or default to 0,0
-    const centerAttr = mapElement.getAttribute('center');
-    const currentCenter = centerAttr ? centerAttr.split(',').map(Number) : [0, 0];
-    let [currentLat, currentLng] = currentCenter;
+    // Get current duck position or default to 0,0
+    const positionAttr = modelElement.getAttribute('position');
+    const currentPosition = positionAttr ? positionAttr.split(',').map(Number) : [0, 0];
+    let [currentLat, currentLng] = currentPosition;
 
     const step = 0.0001; // Adjust step size for latitude and longitude changes
 
     switch (e.key) {
-      case 'ArrowUp': // Move center north
+      case 'ArrowUp': // Move duck north
         currentLat += step;
         break;
-      case 'ArrowDown': // Move center south
+      case 'ArrowDown': // Move duck south
         currentLat -= step;
         break;
-      case 'ArrowLeft': // Move center west
+      case 'ArrowLeft': // Move duck west
         currentLng -= step;
         break;
-      case 'ArrowRight': // Move center east
+      case 'ArrowRight': // Move duck east
         currentLng += step;
         break;
       default:
         return; // Ignore other keys
     }
 
-    // Update the center attribute of the map
-    mapElement.setAttribute('center', `${currentLat},${currentLng}`);
-
-    // Update the position attribute of the model to match the new center
-    if (modelElement) {
-      modelElement.setAttribute('position', `${currentLat},${currentLng}`);
-    }
+    // Only update the duck's position
+    modelElement.setAttribute('position', `${currentLat},${currentLng}`);
   });
 
   // Add space key handler for duck jumping
