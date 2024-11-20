@@ -8,6 +8,8 @@ let DebugMenu;
 let mapElement; // Declare mapElement as a global variable
 let modelElement; // Declare modelElement as a global variable
 let isDuckJumping = false;
+let currentTargetIndex = 0;
+let hasReachedTarget = false;
 
 // Access the environment variables
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -16,7 +18,7 @@ const googleGeminiApiKey = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY;
 // Define the points for each city at the top with your other global variables
 const CITY_ROUTES = {
     'San Francisco': {
-
+        
         pointA: { lat: 37.79524876083947, lng: -122.39391854281975 },  // Ferry Building
         pointB: { lat: 37.7965559917908, lng: -122.39509856819579 },   // Joyride Pizza to the right
         pointC: { lat: 37.801003068298556, lng: -122.39904293262651 }, // Exploratorium to the right
@@ -108,6 +110,10 @@ async function initializePolyline(map, city) {
 
 function initApp() {
     console.log("Initializing app...");
+    
+    // Add instructions window creation
+    createInstructionsWindow();
+    
     const tripForm = document.getElementById('trip-form');
     if (!tripForm) {
         console.error("Trip form not found in the DOM!");
@@ -473,7 +479,6 @@ document.addEventListener('keydown', function (e) {
 });
 
 let animationFrameId = null;
-let currentPathIndex = 0;
 let lastTimestamp = null;
 let isMoving = false;
 
@@ -488,10 +493,8 @@ document.addEventListener('keydown', function (e) {
 
 function animate(timestamp) {
     if (!lastTimestamp) lastTimestamp = timestamp;
-    const deltaTime = (timestamp - lastTimestamp) / 1000; // Convert to seconds
+    const deltaTime = (timestamp - lastTimestamp) / 1000;
     lastTimestamp = timestamp;
-
-    console.log("Animating duck... deltaTime:", deltaTime, "timestamp:", timestamp);
 
     // Get route points for selected city
     const route = [
@@ -501,47 +504,54 @@ function animate(timestamp) {
         CITY_ROUTES[userData.city].pointD
     ];
 
-    if (currentPathIndex >= route.length - 1) {
+    // Check if we've reached the final destination
+    if (currentTargetIndex >= route.length) {
         isMoving = false;
-        return; // Stop at end of route
+        cancelAnimationFrame(animationFrameId);
+        console.log("Journey completed!");
+        return;
     }
 
-    // Current and next points
-    const currentPoint = route[currentPathIndex];
-    const nextPoint = route[currentPathIndex + 1];
-
-    // Calculate distance between points
-    const dlat = nextPoint.lat - currentPoint.lat;
-    const dlng = nextPoint.lng - currentPoint.lng;
-    const distance = Math.sqrt(dlat * dlat + dlng * dlng);
-
-    // Calculate movement for this frame (1 meter/second)
-    const speed = 0.0008; // Approximate conversion of 1 meter to degrees
-    const step = speed * deltaTime;
-    const progress = step / distance;
-
-    // Get current position
+    // Get current position and target
     const positionAttr = modelElement.getAttribute('position');
-    let [currentLat, currentLng] = positionAttr.split(',').map(Number);
+    const [currentLat, currentLng] = positionAttr.split(',').map(Number);
+    const targetPoint = route[currentTargetIndex];
 
-    // Move towards next point
-    currentLat += dlat * progress;
-    currentLng += dlng * progress;
+    // Calculate distance to target
+    const dlat = targetPoint.lat - currentLat;
+    const dlng = targetPoint.lng - currentLng;
+    const distanceToTarget = Math.sqrt(dlat * dlat + dlng * dlng);
 
-    // Check if we've reached or passed the next point
-    const distanceToNext = Math.sqrt(
-        Math.pow(nextPoint[0] - currentLat, 2) +
-        Math.pow(nextPoint[1] - currentLng, 2)
-    );
-
-    if (distanceToNext < speed) {
-        currentPathIndex++;
-        currentLat = nextPoint[0];
-        currentLng = nextPoint[1];
+    // Check if we've reached the current target
+    if (distanceToTarget < 0.00001) { // Small threshold for "reaching" the target
+        currentTargetIndex++;
+        if (currentTargetIndex >= route.length) {
+            isMoving = false;
+            cancelAnimationFrame(animationFrameId);
+            console.log("Journey completed!");
+            return;
+        }
+        console.log(`Reached point ${currentTargetIndex}. Moving to next target.`);
     }
+
+    // Calculate movement
+    const speed = 0.0008;
+    const step = speed * deltaTime;
+    const progress = Math.min(step / distanceToTarget, 1);
+
+    // Move towards target
+    const newLat = currentLat + (dlat * progress);
+    const newLng = currentLng + (dlng * progress);
 
     // Update duck position
-    modelElement.setAttribute('position', `${currentLat},${currentLng}`);
+    modelElement.setAttribute('position', `${newLat},${newLng}`);
+
+    // Update map to follow duck
+    mapElement.setAttribute('center', `${newLat},${newLng}`);
+    mapElement.setAttribute('tilt', '70');
+    mapElement.setAttribute('range', '177');
+    //mapElement.setAttribute('heading', '-32');
+    mapElement.setAttribute('roll', '0');
 
     if (isMoving) {
         animationFrameId = requestAnimationFrame(animate);
@@ -550,8 +560,11 @@ function animate(timestamp) {
 
 function startDuckMovement() {
     if (!modelElement) return;
+    currentTargetIndex = 1; // Start moving towards point B (index 1)
+    isMoving = true;
     animationFrameId = requestAnimationFrame(animate);
 }
+
 
 
 // Call this function whenever the map updates
@@ -575,8 +588,30 @@ function updateDebugMenu() {
             border-radius: 5px;
             font-family: monospace;
             z-index: 1000;
+            display: none;  // Hide by default
         `;
         document.body.appendChild(debugMenu);
+
+        // Create toggle button
+        const toggleButton = document.createElement('button');
+        toggleButton.id = 'debug-toggle';
+        toggleButton.textContent = 'Debug Info';
+        toggleButton.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1001;
+        `;
+        toggleButton.addEventListener('click', () => {
+            debugMenu.style.display = debugMenu.style.display === 'none' ? 'block' : 'none';
+        });
+        document.body.appendChild(toggleButton);
     }
 
     // Update content
@@ -612,3 +647,39 @@ document.addEventListener('DOMContentLoaded', function () {
     // Update debug menu every 100ms
     setInterval(updateDebugMenu, 100);
 });
+
+// Add this new function
+function createInstructionsWindow() {
+    const instructionsWindow = document.createElement('div');
+    instructionsWindow.id = 'instructions-window';
+    instructionsWindow.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: Arial, sans-serif;
+        z-index: 1000;
+        max-width: 300px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    `;
+
+    instructionsWindow.innerHTML = `
+        <h3 style="margin: 0 0 10px 0; color: #4CAF50;">Controls:</h3>
+        <ul style="margin: 0; padding-left: 20px; line-height: 1.4;">
+            <li><strong>Enter</strong> - Start the journey</li>
+            <!--<li><strong>Arrow Keys</strong> - Move duck</li>-->
+            <li><strong>Space</strong> - Jump</li>
+            <li><strong>Z/X</strong> - Rotate camera left/right</li>
+            <li><strong>C/V</strong> - Rotate duck</li>
+        </ul>
+        <p style="margin: 10px 0 0 0; color: #FFC107;">
+            Press <strong>Enter</strong> to begin your adventure!
+        </p>
+    `;
+
+    document.body.appendChild(instructionsWindow);
+}
+
