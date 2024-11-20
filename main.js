@@ -339,9 +339,9 @@ const cameraOptions = {
     const gemElement = document.createElement('gmp-model-3d');
     gemElement.setAttribute('src', './gem.glb');
     gemElement.setAttribute('altitude-mode', 'relative-to-ground');
-    gemElement.setAttribute('position', `37.7965559917908,-122.39509856819579,20`);
-    gemElement.setAttribute('scale', '30');
-    gemElement.setAttribute('orientation', '0,90,0');
+    gemElement.setAttribute('position', `37.7965559917908,-122.39509856819579,28`);
+    gemElement.setAttribute('scale', '50');
+    gemElement.setAttribute('orientation', '180,20,100');
     mapElement.appendChild(gemElement);
     console.log("Added gem model at:", center);
     
